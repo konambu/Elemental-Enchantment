@@ -1,0 +1,12 @@
+material EE_Trail
+{
+ technique { pass {
+  vertex_program_ref Basic_Coloured_Texture_VP {}
+  fragment_program_ref Basic_Texture_FP {}
+  lighting off
+  scene_blend alpha_blend
+  depth_write off
+  cull_hardware none
+  texture_unit { texture EE_Trail_Gradient.dds tex_address_mode clamp }
+ } }
+}

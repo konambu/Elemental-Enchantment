@@ -1,0 +1,11 @@
+material SB_ColdMist
+{
+ technique { pass {
+  vertex_program_ref Basic_Coloured_Texture_VP {}
+  fragment_program_ref Basic_Texture_FP {}
+  lighting off
+  scene_blend alpha_blend
+  depth_write off
+  texture_unit { texture Mist_Cloud.png }
+ } }
+}

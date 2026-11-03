@@ -1,0 +1,51 @@
+system SB_Prototype_IceBlade
+{
+    category kenshi_particles
+    technique ColdMist
+    {
+        visual_particle_quota 64
+        material SB_ColdMist
+        renderer Billboard
+        {
+            billboard_type oriented_self
+            billboard_rotation_type vertex
+        }
+        emitter Box Mist
+        {
+            emission_rate 24
+            position 0 5 0
+            box_width 0.15
+            box_height 7
+            box_depth 0.15
+            direction 0 1 0
+            angle 8
+            time_to_live dyn_random
+            {
+                min 2.5
+                max 3.5
+            }
+            velocity dyn_random
+            {
+                min 0.5
+                max 0.9
+            }
+            particle_width dyn_random
+            {
+                min 1.2
+                max 2
+            }
+            particle_height dyn_random
+            {
+                min 3.8
+                max 5.2
+            }
+        }
+        affector Colour
+        {
+            time_colour 0 0.6 0.85 1 0
+            time_colour 0.2 0.65 0.85 1 0.18
+            time_colour 1 0.45 0.7 1 0
+        }
+    }
+
+}

@@ -1,0 +1,3 @@
+Initial beta release: Added elemental enchantments, character progression, and visual effects for melee combat.
+
+初回ベータ版：属性エンチャント、キャラクターの成長、近接戦闘用エフェクトを追加。

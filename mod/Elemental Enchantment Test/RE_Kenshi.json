@@ -1,0 +1,5 @@
+{
+  "Plugins": [
+    "plugin/ElementalEnchantmentTest.dll"
+  ]
+}

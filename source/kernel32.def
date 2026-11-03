@@ -1,0 +1,14 @@
+LIBRARY KERNEL32.dll
+EXPORTS
+GetModuleHandleA
+GetModuleFileNameA
+VirtualProtect
+CreateFileA
+WriteFile
+CloseHandle
+GetProcAddress
+GetCurrentThreadId
+GetTickCount64
+AcquireSRWLockExclusive
+ReleaseSRWLockExclusive
+GetPrivateProfileIntA

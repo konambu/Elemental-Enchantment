@@ -1,0 +1,106 @@
+system SB_Prototype_LightningBlade
+{
+    category kenshi_particles
+    technique Lightning
+    {
+        visual_particle_quota 20
+        material kenshi_lightning
+        renderer Billboard
+        {
+            billboard_type oriented_self
+            billboard_rotation_type vertex
+        }
+        emitter Box Blade
+        {
+            emission_rate 12
+            position 0 5 0
+            box_width 0.7
+            box_height 8
+            box_depth 0.7
+            direction 0 1 0
+            angle 3
+            time_to_live dyn_random
+            {
+                min 0.30
+                max 0.42
+            }
+            velocity 1.5
+            particle_width dyn_random
+            {
+                min 0.7
+                max 1.2
+            }
+            particle_height dyn_random
+            {
+                min 2.3
+                max 3.8
+            }
+        }
+        affector TextureRotator
+        {
+            rotation dyn_random
+            {
+                min -0.45
+                max 0.45
+            }
+            rotation_speed 0
+        }
+        affector Colour
+        {
+            time_colour 0 0.4 0.75 1 0
+            time_colour 0.15 0.55 0.8 1 1
+            time_colour 1 0.1 0.3 1 0
+        }
+    }
+    technique SoftGlow
+    {
+        visual_particle_quota 20
+        material kenshi_lightning2
+        renderer Billboard
+        {
+            billboard_type oriented_self
+            billboard_rotation_type vertex
+        }
+        emitter Box Blade
+        {
+            emission_rate 6
+            position 0 5 0
+            box_width 0.7
+            box_height 8
+            box_depth 0.7
+            direction 0 1 0
+            angle 3
+            time_to_live dyn_random
+            {
+                min 0.30
+                max 0.42
+            }
+            velocity 1.5
+            particle_width dyn_random
+            {
+                min 1.0
+                max 1.6
+            }
+            particle_height dyn_random
+            {
+                min 2.3
+                max 3.8
+            }
+        }
+        affector TextureRotator
+        {
+            rotation dyn_random
+            {
+                min -0.45
+                max 0.45
+            }
+            rotation_speed 0
+        }
+        affector Colour
+        {
+            time_colour 0 0.2 0.4 0.65 0
+            time_colour 0.15 0.25 0.4 0.65 0.45
+            time_colour 1 0.05 0.15 0.5 0
+        }
+    }
+}

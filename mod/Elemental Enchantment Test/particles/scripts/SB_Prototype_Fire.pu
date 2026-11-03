@@ -1,0 +1,59 @@
+system SB_Prototype_Fire
+{
+    category kenshi_particles
+    technique BladeFlame
+    {
+        visual_particle_quota 90
+        material Flame2
+        renderer Billboard
+        {
+            billboard_type oriented_self
+            billboard_rotation_type vertex
+        }
+        emitter Box BladeSurface
+        {
+            emission_rate 75
+            position 0 5 0
+            box_width 0.8
+            box_height 7
+            box_depth 0.8
+            direction 0 1 0
+            angle 20
+            time_to_live dyn_random
+            {
+                min 0.16
+                max 0.3
+            }
+            velocity dyn_random
+            {
+                min 1
+                max 4.5
+            }
+            particle_width dyn_random
+            {
+                min 0.7
+                max 1.25
+            }
+            particle_height dyn_random
+            {
+                min 3.0
+                max 4.5
+            }
+        }
+        affector TextureRotator
+        {
+            rotation dyn_random
+            {
+                min -0.35
+                max 0.35
+            }
+            rotation_speed 0
+        }
+        affector Colour
+        {
+            time_colour 0 0.8 0.08 0.01 0
+            time_colour 0.2 1 0.3 0.02 0.8
+            time_colour 1 0.35 0.02 0 0
+        }
+    }
+}

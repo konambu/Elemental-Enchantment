@@ -1,0 +1,59 @@
+system SB_Prototype_WaterHand
+{
+    category kenshi_particles
+    technique WaterSplashes
+    {
+        visual_particle_quota 35
+        material Footsplash[A]
+        renderer Billboard
+        {
+            billboard_rotation_type vertex
+        }
+        emitter Box Drops
+        {
+            emission_rate 18
+            position 0 0 0
+            box_width 0.15
+            box_height 1.4
+            box_depth 0.15
+            direction 0 1 0
+            angle 20
+            time_to_live dyn_random
+            {
+                min 0.25
+                max 0.45
+            }
+            velocity dyn_random
+            {
+                min 0.2
+                max 0.7
+            }
+            particle_width dyn_random
+            {
+                min 1.1
+                max 1.8
+            }
+            particle_height dyn_random
+            {
+                min 1.1
+                max 1.8
+            }
+        }
+        affector TextureRotator
+        {
+            rotation dyn_random
+            {
+                min -0.5
+                max 0.5
+            }
+            rotation_speed 0
+        }
+        affector Colour
+        {
+            time_colour 0 0.3 0.65 1 0
+            time_colour 0.18 0.5 0.8 1 0.95
+            time_colour 1 0.12 0.45 1 0
+        }
+    }
+
+}
