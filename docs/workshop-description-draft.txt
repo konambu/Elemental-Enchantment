@@ -1,31 +1,65 @@
 [h1]Elemental Enchantment[/h1]
 
-Enchant your melee weapons with elemental power. Choose an element for each character, develop their affinity, and unlock a second element as their Elemental level grows.
+Enchant your melee weapons and fists with elemental power. Choose a main element for each character, develop their aptitude, and eventually combine two elements.
 
-[h2]Features[/h2]
+[h2]Elements[/h2]
+Each bonus grows with the shared Elemental level. The numbers below are for a main element at level 0–100; secondary bonuses are scaled by the secondary element's strength.
 [list]
-[*]Five elements: Fire, Lightning, Wind, Water and Ice, each with its own visual effects and combat bonuses.
-[*]A character window for selecting elements and checking aptitude, experience and bonuses.
-[*]One shared Elemental level, with experience affected by each character’s aptitude for the chosen element.
-[*]A secondary element unlocks at level 50 and becomes stronger as the character progresses.
-[*]Effects for melee weapons and unarmed combat. If you use a dual-wielding mod, effects can appear on both weapons.
+[*][b]Fire[/b]: Adds blunt damage equal to 5–15% of the attack's base cut and blunt damage.
+[*][b]Lightning[/b]: Adds 5–15% armour penetration and increases attack speed by 1–5%.
+[*][b]Wind[/b]: Increases attack and block speed by 2–10%.
+[*][b]Water[/b]: Adds cut damage equal to 5–15% of the attack's base cut and blunt damage.
+[*][b]Ice[/b]: Adds cut damage equal to 2–10% of the attack's base cut and blunt damage, and increases the bleed multiplier by 0.1–0.5.
 [/list]
 
-[h2]Requirements[/h2]
-RE_Kenshi and KenshiLib are required. Install RE_Kenshi using its official instructions and enable this mod in the Kenshi launcher.
-[url=https://github.com/BFrizzleFoShizzle/RE_Kenshi]RE_Kenshi: installation instructions[/url]
+[h2]Aptitude and experience[/h2]
+Each character receives a randomly determined aptitude. Their strongest element gains Elemental experience at 100%; the two neighbouring elements gain 80%; the other two gain 60%. Rare characters are equally gifted in all five elements. These rates affect experience gained while using that element, not the maximum level or combat bonus.
 
-This is a standalone mod. Arcane Magic is not required. Dual-wielding itself requires a separate mod. Tested on Kenshi 1.0.65, RE_Kenshi 0.3.5 and KenshiLib 0.5.0. Other builds have not been verified. This is a beta release.
+All elements share one Elemental level, up to 100. Successful melee attacks earn experience while an element is active. Crossbows are excluded. Open the character's stats and select ENCHANTMENT to choose elements and view aptitude, experience and bonuses.
 
-[h2]日本語[/h2]
-近接武器に属性の力を付与するModです。キャラクターごとに属性を選び、成長させると副属性も使えるようになります。
-
+[h2]Progression[/h2]
 [list]
-[*]火・雷・風・水・氷の５属性。それぞれ異なるエフェクトと戦闘効果があります。
-[*]キャラクター画面から属性の選択、適性、経験値、効果を確認できます。
-[*]共通のElementalレベルが成長します。経験値の獲得量は使用中の属性への適性によって変わります。
-[*]レベル50で副属性が解放され、その後も成長に応じて強くなります。
-[*]近接武器と素手に対応。二刀流Modを使う場合は両方の武器にエフェクトが表示されます。
+[*][b]Level 20[/b]: Weapon trails appear while attacking.
+[*][b]Level 40[/b]: Effects grow stronger visually and flash on hits.
+[*][b]Level 50[/b]: Unlock a secondary element at 25% strength.
+[*][b]Levels 60 / 70 / 80 / 90 / 100[/b]: Secondary strength rises to 35% / 45% / 55% / 65% / 75%.
+[*][b]Levels 80 and 100[/b]: Elemental effects grow larger visually.
 [/list]
 
-必要なもの：RE_KenshiとKenshiLib。RE_Kenshiの公式案内に従って導入し、ランチャーでこのModを有効にしてください。Arcane Magicは必要ありません。二刀流そのものには別のModが必要です。Kenshi 1.0.65／RE_Kenshi 0.3.5／KenshiLib 0.5.0でテストしています。ベータ版です。
+[h2]Requirements and compatibility[/h2]
+Requires [url=https://github.com/BFrizzleFoShizzle/RE_Kenshi]RE_Kenshi[/url]. Tested on Kenshi 1.0.65 with RE_Kenshi 0.3.5; other builds have not been verified. The mod applies to player-controlled characters using melee weapons or unarmed combat. If a separate dual-wielding mod is installed, effects can appear on both weapons.
+
+This is an initial beta. Please report any problems you encounter!
+
+[h1]日本語[/h1]
+
+近接武器や素手に属性の力をまとわせるModです。キャラクターごとに主属性を選び、成長すると２つ目の属性も組み合わせられます。
+
+[h2]属性ごとの効果[/h2]
+数値は主属性を使った場合のElementalレベル0〜100の範囲です。副属性の効果は、その時点の副属性の強さに応じて小さくなります。
+[list]
+[*][b]火[/b]：攻撃の基本切断＋打撃ダメージの5〜15%を打撃ダメージとして追加。
+[*][b]雷[/b]：防具貫通を5〜15%追加し、攻撃速度を1〜5%上昇。
+[*][b]風[/b]：攻撃・防御速度を2〜10%上昇。
+[*][b]水[/b]：攻撃の基本切断＋打撃ダメージの5〜15%を切断ダメージとして追加。
+[*][b]氷[/b]：攻撃の基本切断＋打撃ダメージの2〜10%を切断ダメージとして追加し、出血倍率を0.1〜0.5加算。
+[/list]
+
+[h2]適性と経験値[/h2]
+各キャラクターにはランダムで得意属性が設定されます。得意属性の経験値は100%、その両隣は80%、残り２属性は60%。まれに全属性が得意なキャラクターもいます。適性は経験値の入りやすさに影響し、最終レベルや効果の上限は変わりません。
+
+レベルは全属性で共通、上限は100です。属性を有効にして近接攻撃を当てると経験値が入ります。クロスボウは対象外です。キャラクターの能力画面にあるENCHANTMENTから、属性の選択や適性・経験値・効果を確認できます。
+
+[h2]レベルごとの解放[/h2]
+[list]
+[*][b]レベル20[/b]：攻撃時に武器の軌跡が出現。
+[*][b]レベル40[/b]：エフェクトが大きくなり、攻撃命中時に強く光ります。
+[*][b]レベル50[/b]：副属性が解放。最初は25%の強さで効果を発揮します。
+[*][b]レベル60／70／80／90／100[/b]：副属性の強さが35%／45%／55%／65%／75%へ上昇。
+[*][b]レベル80・100[/b]：エフェクトがさらに大きくなります。
+[/list]
+
+[h2]必要なもの・対応範囲[/h2]
+[url=https://github.com/BFrizzleFoShizzle/RE_Kenshi]RE_Kenshi[/url]が必要です。Kenshi 1.0.65／RE_Kenshi 0.3.5でテストしています。プレイヤーの仲間が使う近接武器と素手が対象です。二刀流Modを別途使っている場合は、両方の武器にエフェクトが表示されます。
+
+初回ベータ版です。不具合があればコメントで教えてください！
