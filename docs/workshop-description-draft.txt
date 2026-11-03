@@ -8,14 +8,14 @@ Enchant your melee weapons with elemental power. Choose an element for each char
 [*]A character window for selecting elements and checking aptitude, experience and bonuses.
 [*]One shared Elemental level, with experience affected by each character’s aptitude for the chosen element.
 [*]A secondary element unlocks at level 50 and becomes stronger as the character progresses.
-[*]Effects for melee weapons and unarmed combat. Dual-wielding support does not require a dual-wielding mod.
+[*]Effects for melee weapons and unarmed combat. If you use a dual-wielding mod, effects can appear on both weapons.
 [/list]
 
 [h2]Requirements[/h2]
 RE_Kenshi and KenshiLib are required. Install RE_Kenshi using its official instructions and enable this mod in the Kenshi launcher.
 [url=https://github.com/BFrizzleFoShizzle/RE_Kenshi]RE_Kenshi: installation instructions[/url]
 
-This is a standalone mod. Arcane Magic is not required.
+This is a standalone mod. Arcane Magic is not required. Dual-wielding itself requires a separate mod. Tested on Kenshi 1.0.65, RE_Kenshi 0.3.5 and KenshiLib 0.5.0. Other builds have not been verified. This is a beta release.
 
 [h2]日本語[/h2]
 近接武器に属性の力を付与するModです。キャラクターごとに属性を選び、成長させると副属性も使えるようになります。
@@ -25,7 +25,7 @@ This is a standalone mod. Arcane Magic is not required.
 [*]キャラクター画面から属性の選択、適性、経験値、効果を確認できます。
 [*]共通のElementalレベルが成長します。経験値の獲得量は使用中の属性への適性によって変わります。
 [*]レベル50で副属性が解放され、その後も成長に応じて強くなります。
-[*]近接武器と素手に対応。二刀流Modなしでも使用できます。
+[*]近接武器と素手に対応。二刀流Modを使う場合は両方の武器にエフェクトが表示されます。
 [/list]
 
-必要なもの：RE_KenshiとKenshiLib。RE_Kenshiの公式案内に従って導入し、ランチャーでこのModを有効にしてください。Arcane Magicは必要ありません。
+必要なもの：RE_KenshiとKenshiLib。RE_Kenshiの公式案内に従って導入し、ランチャーでこのModを有効にしてください。Arcane Magicは必要ありません。二刀流そのものには別のModが必要です。Kenshi 1.0.65／RE_Kenshi 0.3.5／KenshiLib 0.5.0でテストしています。ベータ版です。
