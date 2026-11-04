@@ -36,6 +36,7 @@ static void stats_window_update_hook(void* window)
                 __finally {ReleaseSRWLockExclusive(&guard);}
             }
         }
+        if(have&&all_aptitudes){int rate_index;for(rate_index=0;rate_index<5;++rate_index)affinity.rates[rate_index]=100;}
         if(have)sb_ui_view_sync(&stats_views[i].view,&ui_api,window,character,index,serial_number,&affinity,editable);
         else sb_ui_view_sync(&stats_views[i].view,&ui_api,0,0,0,0,0,0);
     } __except(1) {ui_failed=1;logline("UI: disabled after native UI error.\r\n");}

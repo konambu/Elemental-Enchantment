@@ -22,6 +22,7 @@ typedef struct { void* owner; void* blade; void* tag; void* scene; void* parent;
 __declspec(dllimport) MODULE __stdcall GetModuleHandleA(const char*);
 __declspec(dllimport) void* __stdcall GetProcAddress(MODULE,const char*);
 __declspec(dllimport) DWORD __stdcall GetModuleFileNameA(MODULE,char*,DWORD);
+__declspec(dllimport) unsigned int __stdcall GetPrivateProfileIntA(const char*,const char*,int,const char*);
 __declspec(dllimport) DWORD __stdcall GetCurrentThreadId(void);
 __declspec(dllimport) U64 __stdcall GetTickCount64(void);
 __declspec(dllimport) void __stdcall AcquireSRWLockExclusive(void*);
@@ -38,6 +39,25 @@ typedef struct {void* character;void* body;void* bone;void* scene;void* parent;v
 static HandFire hand_fires[SB_ALLY_LIMIT*2];
 static void* guard; static DWORD internal; static int active,logged_missing,logged_full; static U64 serial;
 static char log_path[1024]; static MODULE self;
+static char settings_path[1024]; static int all_aptitudes;
+typedef struct MCM_Api MCM_Api;
+struct MCM_Api {
+    int version; void* impl;
+    void (__cdecl *beginMod)(MCM_Api*,const char*,const char*,const char*,void (__cdecl *)(void));
+    void (__cdecl *section)(MCM_Api*,const char*);
+    void (__cdecl *toggle)(MCM_Api*,const char*,const char*,const char*,const char*,int,unsigned);
+};
+static void __cdecl reload_settings(void) {
+    all_aptitudes=settings_path[0] && GetPrivateProfileIntA("General","AllAptitudes100",0,settings_path)!=0;
+}
+__declspec(dllexport) void __cdecl MCM_Describe(MCM_Api* api) {
+    if(!api || api->version<1 || !api->beginMod || !api->section || !api->toggle || !settings_path[0])return;
+    api->beginMod(api,"ElementalEnchantment","Elemental Enchantment",settings_path,reload_settings);
+    api->section(api,"Aptitude");
+    api->toggle(api,"General","AllAptitudes100","All elemental aptitudes 100%",
+      "All player characters gain elemental experience at 100% speed. Original aptitudes return when disabled.",0,0);
+}
+
 static void* entity_vtable;
 static void* (*entity_mesh)(void*); static const String* (*resource_name)(void*);
 static void* (*mesh_bounds)(void*); static const Vec* (*bounds_maximum)(void*);
@@ -185,7 +205,7 @@ static int character_hit_hook(void* target,int direction,void* damage,void* atta
     if(active&&attacker&&target&&attacker!=target&&(result==1||result==2||result==6)&&internal!=GetCurrentThreadId())__try {
         if(character_is_player(attacker)&&melee_context(attacker)){void* stats=character_stats(attacker);const unsigned char* h=(const unsigned char*)character_handle(attacker);
             if(stats&&h){unsigned int index=*(const unsigned int*)(h+0x14),serial=*(const unsigned int*)(h+0x18);AcquireSRWLockExclusive(&guard);
-                __try {SBCharacterRecord* r=sb_persistence_bind(&persistence,stats,attacker,index,serial,index^(serial*0x9e3779b9u),(unsigned int)element_from_character(attacker));if(r&&!r->read_only&&sb_affinity_award_hit(&r->affinity)){int k;if(sb_affinity_level(&r->affinity,0)>=40)for(k=0;k<SB_ALLY_LIMIT;++k)if(allies[k].character==attacker){allies[k].hit_glow=.18f;break;}}}
+                __try {SBCharacterRecord* r=sb_persistence_bind(&persistence,stats,attacker,index,serial,index^(serial*0x9e3779b9u),(unsigned int)element_from_character(attacker));if(r&&!r->read_only&&sb_affinity_award_hit_rate(&r->affinity,all_aptitudes)){int k;if(sb_affinity_level(&r->affinity,0)>=40)for(k=0;k<SB_ALLY_LIMIT;++k)if(allies[k].character==attacker){allies[k].hit_glow=.18f;break;}}}
                 __finally {ReleaseSRWLockExclusive(&guard);}
             }
         }
@@ -337,6 +357,9 @@ __declspec(dllexport) void startPlugin(void) {
     MODULE mygui=GetModuleHandleA("MyGUIEngine_x64.dll");void* ui_update;void* ui_clear;void* ui_destroy;
 #endif
     if(!self || !GetModuleFileNameA(self,log_path,sizeof(log_path)))return;for(i=0;log_path[i];++i)if(log_path[i]=='\\'||log_path[i]=='/')last=i;
+    for(i=0;i<=last;++i)settings_path[i]=log_path[i];
+    {const char* name="ElementalEnchantment.ini";for(i=0;name[i] && last+1+i<sizeof(settings_path)-1;++i)settings_path[last+1+i]=name[i];settings_path[last+1+i]=0;}
+    reload_settings();
     {const char* name="SpellbladeFireProbe.log";for(i=0;name[i];++i)log_path[last+1+i]=name[i];log_path[last+1+i]=0;}
     if(!lib || !module_matches(ogre,0x5ca5f929,0x9c9000) || !module_matches(pu,0x5ca5faa4,0x718000) || !(module_matches(game,0x6602d59d,0x232d000)||module_matches(game,0x65d604d7,0x232c000))) {logline("INACTIVE: unreviewed game or engine build.\r\n");return;}
 #ifdef SB_ENABLE_UI
@@ -549,6 +572,15 @@ __declspec(dllexport) int probeTestIdentity(void) {
     test_player_flag=1;character_update_hook((void*)1);character_destroy_hook((void*)1);
     if(is_ally_body((void*)3)||test_character_calls!=4)return 3;
     active=0;return 0;
+}
+__declspec(dllexport) int probeTestAptitudeOverride(void) {
+    SBAffinity a,b;int i,record[3];
+    if(!sb_affinity_create(&a,7,1))return 1;
+    a.rates[0]=60;a.rates[1]=60;a.rates[2]=80;a.rates[3]=80;a.rates[4]=100;
+    for(i=0;i<25;++i)if(!sb_affinity_award_hit_rate(&a,1))return 2;
+    if(a.xp[0]!=100||a.rates[0]!=60||!sb_affinity_encode(&a,record)||!sb_affinity_decode(&b,record)||b.rates[0]!=60)return 3;
+    for(i=0;i<25;++i)sb_affinity_award_hit_rate(&b,0);
+    return b.xp[0]==160?0:4;
 }
 __declspec(dllexport) int probeTestAffinity(void) {unsigned int i,counts[6]={0};for(i=1;i<1000;++i){unsigned int a=affinity_seed(i,7);if(a!=affinity_seed(i,7)||a<1||a>5)return 1;++counts[a];}for(i=1;i<=5;++i)if(counts[i]<120)return 2;return 0;}
 __declspec(dllexport) int probeTestInit(void* owner,void* blade,void* tag) {

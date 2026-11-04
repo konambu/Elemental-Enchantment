@@ -11,6 +11,10 @@ A work-in-progress Kenshi mod that gives player characters elemental enchantment
 
 The interface is currently in English. Effects apply to player-controlled melee and unarmed combat.
 
+## Optional MCM setting
+
+With Mod Config Menu installed, open Options > MCM > Elemental Enchantment to enable **All elemental aptitudes 100%**. This removes elemental experience penalties for all player characters. The option is off by default; turning it off restores each character's original aptitude.
+
 ## Repository
 
 - `mod/Elemental Enchantment/`: Workshop package, including its plugin DLL.
