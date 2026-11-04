@@ -1,11 +1,13 @@
 #include "spellblade_ui_view.h"
-static const char* labels[5]={"Fire","Lightning","Wind","Water","Ice"};
+#include "spellblade_localization.h"
 static const int ring_order[5]={0,2,4,3,1};
-static const char* buttons[6]={"None","Fire","Lightning","Wind","Water","Ice"};
+static int add(char* out,int pos,int cap,const char* text){while(text&&*text&&pos<cap-1)out[pos++]=*text++;out[pos]=0;return pos;}
+static int num(char* out,int pos,int cap,unsigned value){char tmp[12];int n=0;do{tmp[n++]=(char)('0'+value%10);value/=10;}while(value&&n<11);while(n&&pos<cap-1)out[pos++]=tmp[--n];out[pos]=0;return pos;}
+static void decimal(char* out,int cap,const char* label,unsigned value,int percent){int n=0;n=add(out,n,cap,label);n=add(out,n,cap," +");n=num(out,n,cap,value/10);n=add(out,n,cap,".");n=num(out,n,cap,value%10);if(percent)add(out,n,cap,"%");}
 static unsigned int ui_level(const SBAffinity* a){unsigned int lo=0,hi=100;while(lo<hi){unsigned int mid=(lo+hi+1u)/2u;if(a->xp[0]>=4u*(20u*mid+mid*(mid-1u)))lo=mid;else hi=mid-1u;}return lo;}
 static unsigned int ui_secondary_percent(unsigned int l){return l<50?0:l<60?25:l<70?35:l<80?45:l<90?55:l<100?65:75;}
-static void selection_title(char out[64],const SBAffinity* a,int second_mode)
-{int i=0;const char* p="MAIN  ";unsigned int e=a->selected;(void)second_mode;while(*p&&i<63)out[i++]=*p++;p=e&&e<=5?labels[e-1]:"None";while(*p&&i<63)out[i++]=*p++;p="     SUB  ";while(*p&&i<63)out[i++]=*p++;e=a->secondary;p=ui_level(a)<50?"Locked":(e&&e<=5?labels[e-1]:"None");while(*p&&i<63)out[i++]=*p++;out[i]=0;}
+static void selection_title(char out[256],const SBAffinity* a,int second_mode)
+{const SBLocale* l=sb_locale_get();int i=0;unsigned e=a->selected;(void)second_mode;i=add(out,i,256,l->main);i=add(out,i,256,"  ");i=add(out,i,256,e<=5?l->element[e]:l->element[0]);i=add(out,i,256,"     ");i=add(out,i,256,l->sub);i=add(out,i,256,"  ");e=a->secondary;add(out,i,256,ui_level(a)<50?l->locked:(e<=5?l->element[e]:l->element[0]));}
 void sb_ui_view_init(SBUIView* v) {int i;if(!v)return;sb_ui_reset(&v->model);v->parent=0;v->opener=0;v->panel=0;v->body=0;v->paper=0;v->header=0;v->window_title=0;v->graph=0;v->close=0;v->status=0;v->bar=0;v->fill=0;v->title=0;v->effect=0;v->detail=0;v->mode_main=0;v->mode_second=0;v->milestone=0;v->xp_label=0;v->xp_percent=0;v->second_mode=0;v->graph_ready=0;for(i=0;i<5;++i){v->labels[i]=0;v->axis_labels[i]=0;}for(i=0;i<6;++i)v->buttons[i]=0;}
 static int valid(const SBUIViewAPI* a){return a&&a->create&&a->destroy&&a->visible&&a->caption&&a->selected&&a->radar&&a->progress;}
 void sb_ui_view_dispose(SBUIView* v,const SBUIViewAPI* a){if(!v||!valid(a))return;if(v->panel)a->destroy(a->context,v->panel);if(v->opener)a->destroy(a->context,v->opener);sb_ui_view_init(v);}
@@ -17,10 +19,10 @@ int sb_ui_view_build(SBUIView* v,const SBUIViewAPI* a,void* parent,int width,int
     x=width+12;
     /* Place inside the unused area below the attributes list. The outer
      * window height includes borders and is not the child client height. */
-    v->opener=a->create(a->context,parent,SB_UI_BUTTON,15,260,150,26);
+    v->opener=a->create(a->context,parent,SB_UI_BUTTON,15,260,170,26);
     v->panel=a->create(a->context,parent,SB_UI_PANEL,x,10,530,448);
     if(!v->opener||!v->panel)goto fail;
-    a->caption(a->context,v->opener,"ENCHANTMENT");a->visible(a->context,v->panel,0);
+    a->caption(a->context,v->opener,sb_locale_get()->opener);a->visible(a->context,v->panel,0);
     v->body=a->create(a->context,v->panel,SB_UI_WINDOW_BODY,0,38,530,410);
     v->header=a->create(a->context,v->panel,SB_UI_WINDOW_HEADER,0,0,530,38);
     if(!v->body||!v->header)goto fail;
@@ -32,9 +34,9 @@ int sb_ui_view_build(SBUIView* v,const SBUIViewAPI* a,void* parent,int width,int
     v->status=a->create(a->context,v->body,SB_UI_LABEL,260,20,240,25);
     if(!v->window_title||!v->graph||!v->close||!v->status)goto fail;a->caption(a->context,v->window_title,"ELEMENTAL ENCHANTMENT");
     {const int xy[5][2]={{100,28},{193,72},{188,230},{20,230},{15,72}};
-    for(i=0;i<5;++i){v->axis_labels[i]=a->create(a->context,v->body,i?SB_UI_AXIS_LABEL:SB_UI_LABEL,xy[i][0],xy[i][1],100,22);if(!v->axis_labels[i])goto fail;a->caption(a->context,v->axis_labels[i],labels[ring_order[i]]);}}
+    for(i=0;i<5;++i){v->axis_labels[i]=a->create(a->context,v->body,i?SB_UI_AXIS_LABEL:SB_UI_LABEL,xy[i][0],xy[i][1],100,22);if(!v->axis_labels[i])goto fail;a->caption(a->context,v->axis_labels[i],sb_locale_get()->element[ring_order[i]+1]);}}
     for(i=0;i<5;++i){v->labels[i]=a->create(a->context,v->body,SB_UI_LABEL,400,57+i*35,110,23);if(!v->labels[i])goto fail;}
-    for(i=0;i<6;++i){int bx=260,by=i?52+(i-1)*35:252,bw=i?125:240;v->buttons[i]=a->create(a->context,v->body,SB_UI_BUTTON,bx,by,bw,27);if(!v->buttons[i])goto fail;a->caption(a->context,v->buttons[i],buttons[i]);}
+    for(i=0;i<6;++i){int bx=260,by=i?52+(i-1)*35:252,bw=i?125:240;v->buttons[i]=a->create(a->context,v->body,SB_UI_BUTTON,bx,by,bw,27);if(!v->buttons[i])goto fail;a->caption(a->context,v->buttons[i],sb_locale_get()->element[i]);}
     v->bar=a->create(a->context,v->body,SB_UI_BAR_BG,20,300,490,14);
     if(!v->bar)goto fail;v->fill=a->create(a->context,v->bar,SB_UI_BAR_FILL,0,0,490,14);if(!v->fill)goto fail;
     v->title=a->create(a->context,v->body,SB_UI_LABEL,20,320,490,22);
@@ -46,38 +48,34 @@ int sb_ui_view_build(SBUIView* v,const SBUIViewAPI* a,void* parent,int width,int
     v->milestone=a->create(a->context,v->body,SB_UI_LABEL,20,8,230,18);
     v->xp_label=a->create(a->context,v->body,SB_UI_BAR_TEXT,26,298,180,18);
     v->xp_percent=a->create(a->context,v->body,SB_UI_BAR_TEXT,450,298,60,18);
-    if(!v->mode_main||!v->mode_second||!v->milestone||!v->xp_label||!v->xp_percent)goto fail;a->caption(a->context,v->mode_main,"MAIN");
+    if(!v->mode_main||!v->mode_second||!v->milestone||!v->xp_label||!v->xp_percent)goto fail;a->caption(a->context,v->mode_main,sb_locale_get()->main);
     return 1;
 fail:sb_ui_view_dispose(v,a);return 0;
 }
 static void label(char out[32],unsigned int rate){int i=0;out[i++]='X';out[i++]='P';out[i++]=' ';if(rate>=100)out[i++]='1';if(rate>=10)out[i++]=(char)('0'+rate/10%10);out[i++]=(char)('0'+rate%10);out[i++]='%';out[i]=0;}
-static void level_text(char out[32],const SBAffinity* a){unsigned int level=ui_level(a);int i=0;const char* p="ELEMENTAL   ";while(*p)out[i++]=*p++;if(level>=100)out[i++]='1';if(level>=10)out[i++]=(char)('0'+level/10%10);out[i++]=(char)('0'+level%10);out[i]=0;}
+static void level_text(char out[128],const SBAffinity* a){int i=0;i=add(out,i,128,sb_locale_get()->elemental);i=add(out,i,128,"   ");num(out,i,128,ui_level(a));}
 static unsigned int progress(char out[32],const SBAffinity* a){unsigned int n,level=0,xp,base,need,pct;int i=0;const char* p="NEXT LEVEL ";if(!a->selected||a->selected>5){p="CHOOSE ELEMENT";while(*p)out[i++]=*p++;out[i]=0;return 0;}xp=a->xp[0];while(level<100){n=level+1;if(xp<4u*(20u*n+n*(n-1u)))break;++level;}if(level==100){p="LEVEL MAX";while(*p)out[i++]=*p++;out[i]=0;return 100;}base=4u*(20u*level+level*(level-1u));need=4u*(20u+2u*level);pct=(xp-base)*100u/need;while(*p)out[i++]=*p++;out[i++]=(char)('0'+pct/10);out[i++]=(char)('0'+pct%10);out[i++]='%';out[i]=0;return pct;}
-static void detail_cut(char out[64],unsigned int value)
-{const char* text="Cut damage +";int i=0;while(*text)out[i++]=*text++;if(value>=100u)out[i++]=(char)('0'+value/100u);out[i++]=(char)('0'+(value/10u)%10u);out[i++]='.';out[i++]=(char)('0'+value%10u);out[i++]='%';out[i]=0;}
-static void detail_attack(char out[64],unsigned int value)
-{const char* text="Attack speed +";int i=0;while(*text)out[i++]=*text++;out[i++]=(char)('0'+(value/10u)%10u);out[i++]='.';out[i++]=(char)('0'+value%10u);out[i++]='%';out[i]=0;}
-static void effect_text(char out[64],char detail_out[64],const char** detail,const SBAffinity* a,unsigned int weight)
+static void effect_text(char out[256],char detail_out[256],const char** detail,const SBAffinity* a,unsigned int weight)
 {
-    unsigned int level=ui_level(a),value;int i=0;const char* text;unsigned int e=a->selected;
-    if(!e||e>5){text="No active element";*detail="Select an element above.";while(*text)out[i++]=*text++;out[i]=0;return;}
-    if(e==1){text="Blunt damage +";value=50u+level;*detail="Percent of base cut + blunt damage.";}
-    else if(e==2){text="Armour penetration +";value=50u+level;detail_attack(detail_out,((10u+(4u*level+5u)/10u)*weight+50u)/100u);*detail=detail_out;}
-    else if(e==3){text="Attack / block speed +";value=20u+(8u*level+5u)/10u;*detail="Applied to current combat speed.";}
-    else if(e==4){text="Cut damage +";value=50u+level;*detail="Percent of base cut + blunt damage.";}
-    else {text="Bleed multiplier +0.";value=10u+(40u*level)/100u;value=(value*weight+50u)/100u;detail_cut(detail_out,((20u+(8u*level+5u)/10u)*weight+50u)/100u);*detail=detail_out;while(*text)out[i++]=*text++;out[i++]=(char)('0'+value/10u);out[i++]=(char)('0'+value%10u);out[i]=0;return;}
-    value=(value*weight+50u)/100u;while(*text)out[i++]=*text++;if(value>=100u)out[i++]=(char)('0'+value/100u);out[i++]=(char)('0'+(value/10u)%10u);out[i++]='.';out[i++]=(char)('0'+value%10u);out[i++]='%';out[i]=0;
+    const SBLocale* l=sb_locale_get();unsigned int level=ui_level(a),value,e=a->selected;
+    if(!e||e>5){add(out,0,256,l->noelement);*detail=l->choose;return;}
+    if(e==1){value=50u+level;decimal(out,256,l->blunt,(value*weight+50u)/100u,1);*detail=l->base;}
+    else if(e==2){value=50u+level;decimal(out,256,l->armour,(value*weight+50u)/100u,1);decimal(detail_out,256,l->bolt,((10u+(4u*level+5u)/10u)*weight+50u)/100u,1);*detail=detail_out;}
+    else if(e==3){value=20u+(8u*level+5u)/10u;decimal(out,256,l->attackblock,(value*weight+50u)/100u,1);*detail=l->winddetail;}
+    else if(e==4){value=50u+level;decimal(out,256,l->cut,(value*weight+50u)/100u,1);*detail=l->base;}
+    else {int n=0;value=(10u+(40u*level)/100u)*weight;value=(value+50u)/100u;n=add(out,n,256,l->bleed);n=add(out,n,256," +0.");if(value<10)n=add(out,n,256,"0");num(out,n,256,value);decimal(detail_out,256,l->cut,((20u+(8u*level+5u)/10u)*weight+50u)/100u,1);*detail=detail_out;}
 }
+static void milestone_text(char out[256],unsigned int level){const SBLocale* l=sb_locale_get();int n=0;unsigned int dest=0,pct=0;const char* what=0;if(level>=100){add(out,0,256,l->master);return;}if(level<20){what=l->trail;dest=20;}else if(level<40){what=l->glow;dest=40;}else if(level<50){what=l->dual;dest=50;}else {what=l->second;if(level<60){dest=60;pct=35;}else if(level<70){dest=70;pct=45;}else if(level<80){dest=80;pct=55;}else if(level<90){dest=90;pct=65;}else {dest=100;pct=75;}}n=add(out,n,256,l->next);n=add(out,n,256,": ");n=add(out,n,256,what);if(pct){n=add(out,n,256," ");n=num(out,n,256,pct);n=add(out,n,256,"%");}n=add(out,n,256," ");n=add(out,n,256,l->level);num(out,n,256,dest);}
 void sb_ui_view_sync(SBUIView* v,const SBUIViewAPI* a,void* window,void* character,unsigned int index,unsigned int serial,const SBAffinity* affinity,int editable)
 {
     int i,changed;if(!v||!valid(a)||!v->panel)return;
     sb_ui_bind(&v->model,window,character,index,serial,affinity,editable);
     a->visible(a->context,v->opener,v->model.has_affinity);a->visible(a->context,v->panel,v->model.visible);
     if(!v->model.visible)return;
-    {unsigned int level=ui_level(&v->model.affinity);const char* next=level<20?"NEXT: TRAIL LV20":level<40?"NEXT: HIT GLOW LV40":level<50?"NEXT: DUAL LV50":level<60?"NEXT: SECOND 35% LV60":level<70?"NEXT: SECOND 45% LV70":level<80?"NEXT: SECOND 55% LV80":level<90?"NEXT: SECOND 65% LV90":level<100?"NEXT: SECOND 75% LV100":"ELEMENTAL MASTER";a->caption(a->context,v->milestone,next);}
-    {unsigned int level=ui_level(&v->model.affinity),pct=ui_secondary_percent(level);char text[32],title[64];int j=0;const char* p=level<50?"LV50 ":"SUB ";while(*p)text[j++]=*p++;if(level<50){if(level>=10)text[j++]=(char)('0'+level/10);text[j++]=(char)('0'+level%10);text[j++]='/';text[j++]='5';text[j++]='0';v->second_mode=0;}else{if(pct>=10)text[j++]=(char)('0'+pct/10);text[j++]=(char)('0'+pct%10);text[j++]='%';}text[j]=0;a->caption(a->context,v->mode_second,text);a->selected(a->context,v->mode_main,!v->second_mode);a->selected(a->context,v->mode_second,v->second_mode);selection_title(title,&v->model.affinity,v->second_mode);a->caption(a->context,v->title,title);}
-    {char text[32],number[8];unsigned int pct=progress(text,&v->model.affinity),level=ui_level(&v->model.affinity);int n=0;a->progress(a->context,v->fill,pct);level_text(text,&v->model.affinity);a->caption(a->context,v->status,editable?text:"READ ONLY: save data");a->caption(a->context,v->xp_label,level==100?"MAX LEVEL":"NEXT LEVEL");if(pct>=100)number[n++]='1';if(pct>=10)number[n++]=(char)('0'+pct/10%10);number[n++]=(char)('0'+pct%10);number[n++]='%';number[n]=0;a->caption(a->context,v->xp_percent,number);}
-    {char text[64],detail_buf[64];const char* detail;SBAffinity shown=v->model.affinity;unsigned int weight=v->second_mode?ui_secondary_percent(ui_level(&shown)):100;if(v->second_mode)shown.selected=shown.secondary;effect_text(text,detail_buf,&detail,&shown,weight);if(!editable){a->caption(a->context,v->effect,"Saved data unavailable.");a->caption(a->context,v->detail,"Effect is disabled.");}else {a->caption(a->context,v->effect,text);a->caption(a->context,v->detail,detail);}}
+    {char next[256];milestone_text(next,ui_level(&v->model.affinity));a->caption(a->context,v->milestone,next);}
+    {unsigned int level=ui_level(&v->model.affinity),pct=ui_secondary_percent(level);char text[128],title[256];int j=0;if(level<50){j=add(text,j,128,"LV50 ");j=num(text,j,128,level);j=add(text,j,128,"/50");v->second_mode=0;}else{j=add(text,j,128,sb_locale_get()->second);j=add(text,j,128," ");j=num(text,j,128,pct);j=add(text,j,128,"%");}a->caption(a->context,v->mode_second,text);a->selected(a->context,v->mode_main,!v->second_mode);a->selected(a->context,v->mode_second,v->second_mode);selection_title(title,&v->model.affinity,v->second_mode);a->caption(a->context,v->title,title);}
+    {char text[128],number[8];unsigned int pct=progress(text,&v->model.affinity),level=ui_level(&v->model.affinity);int n=0;a->progress(a->context,v->fill,pct);level_text(text,&v->model.affinity);a->caption(a->context,v->status,editable?text:sb_locale_get()->readonly);a->caption(a->context,v->xp_label,level==100?sb_locale_get()->maxlevel:sb_locale_get()->nextlevel);if(pct>=100)number[n++]='1';if(pct>=10)number[n++]=(char)('0'+pct/10%10);number[n++]=(char)('0'+pct%10);number[n++]='%';number[n]=0;a->caption(a->context,v->xp_percent,number);}
+    {char text[256],detail_buf[256];const char* detail;SBAffinity shown=v->model.affinity;unsigned int weight=v->second_mode?ui_secondary_percent(ui_level(&shown)):100;if(v->second_mode)shown.selected=shown.secondary;effect_text(text,detail_buf,&detail,&shown,weight);if(!editable){a->caption(a->context,v->effect,sb_locale_get()->unavailable);a->caption(a->context,v->detail,sb_locale_get()->disabled);}else {a->caption(a->context,v->effect,text);a->caption(a->context,v->detail,detail);}}
     for(i=0;i<5;++i){char text[32];label(text,v->model.affinity.rates[i]);a->caption(a->context,v->labels[i],text);}
     for(i=0;i<6;++i)a->selected(a->context,v->buttons[i],(v->second_mode?v->model.affinity.secondary:v->model.affinity.selected)==(unsigned int)i);
     changed=!v->graph_ready||v->graph_state.selected!=v->model.affinity.selected;

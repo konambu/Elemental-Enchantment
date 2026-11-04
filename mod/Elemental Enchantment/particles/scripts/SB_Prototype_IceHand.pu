@@ -41,9 +41,9 @@ system SB_Prototype_IceHand
         }
         affector Colour
         {
-            time_colour 0 0.6 0.85 1 0
-            time_colour 0.2 0.65 0.85 1 0.28
-            time_colour 1 0.45 0.7 1 0
+            time_colour 0 0.8 0.95 1 0
+            time_colour 0.2 0.78 0.93 1 0.4
+            time_colour 1 0.55 0.8 1 0
         }
     }
 

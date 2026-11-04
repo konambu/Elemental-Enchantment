@@ -4,7 +4,7 @@ static FakeWidget widgets[40];static int count,destroyed,texture_created,locks,u
 static unsigned char texture[256*256*4];
 static void* gui(void){return (void*)1;}
 static void* create(void* parent,const SBGameString* type,const SBGameString* skin,const SBMyGUICoord* r,int align,const SBGameString* name)
-{FakeWidget* w;const char* p=skin->capacity<16?skin->text.small:skin->text.heap;(void)parent;(void)r;(void)name;if(align!=10||count>=40)return 0;if(type->text.small[0]=='B'&&skin->size!=18&&skin->size!=22)bad_skin=1;if(type->text.small[0]=='T'&&skin->size!=23)bad_skin=1;if(skin->size==25&&p&&p[0]=='K')++paper;if(!p)bad_skin=1;w=&widgets[count++];w->type=type->text.small[0];return w;}
+{FakeWidget* w;const char* p=skin->capacity<16?skin->text.small:skin->text.heap;(void)parent;(void)r;(void)name;if(align!=10||count>=40)return 0;if(type->text.small[0]=='B'&&skin->size!=18&&skin->size!=22)bad_skin=1;if(type->text.small[0]=='T'&&skin->size!=23&&skin->size!=26)bad_skin=1;if(skin->size==25&&p&&p[0]=='K')++paper;if(!p)bad_skin=1;w=&widgets[count++];w->type=type->text.small[0];return w;}
 static void set_font(void* w,const SBGameString* name){(void)w;if(name->size==29)++fonts;}
 static void set_style(void* w,int style,const SBGameString* layer){(void)w;if(style==1&&layer->size==5)++overlaps;}
 static void set_size(void* w,int width,int height){(void)w;(void)width;(void)height;}
@@ -22,7 +22,7 @@ __declspec(dllexport) int sb_run_mygui_tests(void)
 {
     SBMyGUI engine={gui,create,destroy,set_visible,caption,selected,created,create_texture,dimension,dimension,lock,unlock,set_font,set_style,set_size,set_property};SBUIViewAPI api;SBUIView view;SBAffinity state={3,{30,50,70,90,60}};
     count=destroyed=texture_created=locks=unlocks=centred=darklabels=paper=0;sb_mygui_backend(&engine,&api);sb_ui_view_init(&view);
-    if(!sb_ui_view_build(&view,&api,(void*)2,700,500)||count!=35||bad_skin||fonts!=27||overlaps!=1||centred!=10||darklabels!=15||paper!=1)return 1;
+    if(!sb_ui_view_build(&view,&api,(void*)2,700,500)||count!=35||bad_skin||fonts!=27||overlaps!=1||centred!=10||darklabels!=4||paper!=1)return 1;
     sb_ui_view_sync(&view,&api,(void*)3,(void*)4,5,6,&state,1);
     sb_ui_view_click(&view,&api,view.opener);
     sb_ui_view_sync(&view,&api,(void*)3,(void*)4,5,6,&state,1);

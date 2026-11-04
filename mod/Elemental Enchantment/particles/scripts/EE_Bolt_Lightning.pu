@@ -1,0 +1,55 @@
+system EE_Bolt_Lightning
+{
+    category kenshi_particles
+    technique Lightning
+    {
+        visual_particle_quota 20
+        material kenshi_lightning
+        renderer Billboard
+        {
+            billboard_type oriented_self
+            billboard_rotation_type vertex
+        }
+        emitter Box Blade
+        {
+            emission_rate 12
+            position 0 0 0
+            box_width 1.5
+            box_height 1.5
+            box_depth 1.5
+            direction 0 1 0
+            angle 15
+            time_to_live dyn_random
+            {
+                min 0.07
+                max 0.16
+            }
+            velocity 1
+            particle_width dyn_random
+            {
+                min 1
+                max 2.2
+            }
+            particle_height dyn_random
+            {
+                min 2
+                max 4
+            }
+        }
+        affector TextureRotator
+        {
+            rotation dyn_random
+            {
+                min -0.35
+                max 0.35
+            }
+            rotation_speed 0
+        }
+        affector Colour
+        {
+            time_colour 0 0.4 0.75 1 0
+            time_colour 0.15 0.55 0.8 1 1
+            time_colour 1 0.1 0.3 1 0
+        }
+    }
+}
