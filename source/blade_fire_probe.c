@@ -138,14 +138,14 @@ static unsigned int affinity_seed(unsigned int index,unsigned int serial_number)
 /* Temporary test assignment derived from a character handle. It is not saved
  * and may change after an import or other handle reassignment. */
 static int element_from_character(void* character) {const unsigned char* h=(const unsigned char*)character_handle(character);if(!h)return 1;return (int)affinity_seed(*(const unsigned int*)(h+0x14),*(const unsigned int*)(h+0x18));}
-static void set_ally(void* character,void* body,int is_player,void* left,void* right,int unarmed,int element) {int i,slot=-1;if(!character)return;for(i=0;i<SB_ALLY_LIMIT;++i){if(allies[i].character==character){slot=i;break;}if(slot<0 && !allies[i].character)slot=i;}if(slot>=0){if(is_player&&body){
+static Ally* set_ally(void* character,void* body,int is_player,void* left,void* right,int unarmed,int element) {int i,slot=-1;if(!character)return 0;for(i=0;i<SB_ALLY_LIMIT;++i){if(allies[i].character==character){slot=i;break;}if(slot<0 && !allies[i].character)slot=i;}if(slot>=0){if(is_player&&body){
     if(allies[slot].character!=character){allies[slot].secondary=0;allies[slot].level=0;allies[slot].hit_glow=0.0f;allies[slot].attacking=0;allies[slot].melee_weapon=0;}
 #ifdef SB_ENABLE_PERSISTENCE
     allies[slot].element=element;
 #else
     if(allies[slot].character!=character)allies[slot].element=element;
 #endif
-    allies[slot].character=character;allies[slot].body=body;allies[slot].left=left;allies[slot].right=right;allies[slot].unarmed=unarmed;}else if(allies[slot].character==character){allies[slot].character=0;allies[slot].body=0;allies[slot].left=0;allies[slot].right=0;allies[slot].unarmed=0;allies[slot].element=0;}}}
+    allies[slot].character=character;allies[slot].body=body;allies[slot].left=left;allies[slot].right=right;allies[slot].unarmed=unarmed;return &allies[slot];}else if(allies[slot].character==character){allies[slot].character=0;allies[slot].body=0;allies[slot].left=0;allies[slot].right=0;allies[slot].unarmed=0;allies[slot].element=0;}}return 0;}
 static void forget_body(void* body) {int i;for(i=0;i<SB_ALLY_LIMIT;++i)if(allies[i].body==body){allies[i].character=0;allies[i].body=0;}}
 static void logline(const char* s) { DWORD n=0,w; void* f; while(s[n])++n; f=CreateFileA(log_path,4,3,0,4,0x80,0); if(f!=(void*)(U64)-1) {WriteFile(f,s,n,&w,0);CloseHandle(f);} }
 /* Cache profile IDs for loaded characters. Caller holds guard; cached pointer
@@ -324,7 +324,7 @@ static void* crossbow_wound_hook(void* medical,unsigned char low,int direction,v
     }else result=original_crossbow_wound(medical,low,direction,damage,material,attacker,attackdir,bolt);
     if(bolt&&active&&internal!=GetCurrentThreadId()){AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try{clear_crossbow_projectile(bolt);}__finally{internal=0;ReleaseSRWLockExclusive(&guard);}}
     if(result&&stats&&attacker&&bolt&&active)__try {AcquireSRWLockExclusive(&guard);
-        __try {SBCharacterRecord* r=sb_persistence_bind(&persistence,stats,attacker,index,serial_number,index^(serial_number*0x9e3779b9u),(unsigned int)element_from_character(attacker));if(r&&!r->read_only&&sb_affinity_award_hit_rate(&r->affinity,all_aptitudes))logline("CROSSBOW: hit XP awarded.\r\n");}
+        __try {SBCharacterRecord* r=sb_persistence_bind(&persistence,stats,attacker,index,serial_number,index^(serial_number*0x9e3779b9u),(unsigned int)element_from_character(attacker));if(r&&!r->read_only)sb_affinity_award_hit_rate(&r->affinity,all_aptitudes);}
         __finally {ReleaseSRWLockExclusive(&guard);}
     }__except(1){logline("CROSSBOW: hit XP skipped after error.\r\n");}
     return result;
@@ -389,12 +389,12 @@ static void character_update_hook(void* character) {
 #ifdef SB_ENABLE_PERSISTENCE
             if(player&&body&&has_handle){SBCharacterRecord* r=sb_persistence_bind(&persistence,stats,character,index,serial_number,index^(serial_number*0x9e3779b9u),(unsigned int)element);if(r){element=(int)r->affinity.selected;if(!r->read_only){secondary=(int)r->affinity.secondary;level=(int)sb_affinity_level(&r->affinity,0);}}}
 #endif
-            set_ally(character,body,player||boss,left,right,unarmed,element);
-            {int i;for(i=0;i<SB_ALLY_LIMIT;++i)if(allies[i].character==character){allies[i].secondary=secondary;allies[i].level=level;allies[i].melee_weapon=melee==2;
+            {Ally* ally=set_ally(character,body,player||boss,left,right,unarmed,element);
+            if(ally){ally->secondary=secondary;ally->level=level;ally->melee_weapon=melee==2;
 #ifdef SB_ENABLE_TRAIL
-                allies[i].attacking=attacking;
+                ally->attacking=attacking;
 #endif
-                break;}}
+            }}
         } __finally {ReleaseSRWLockExclusive(&guard);}
     } __except(1) {logline("SKIP: player identity or hand bones unavailable.\r\n");}original_character_update(character);
 }
