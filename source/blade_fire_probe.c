@@ -36,6 +36,12 @@ __declspec(dllimport) int __stdcall CloseHandle(void*);
 static Entry entries[SB_TRACK_LIMIT];
 typedef struct {void* character;void* body;void* left;void* right;int unarmed;int element;int attacking;int secondary;int level;int melee_weapon;float hit_glow;} Ally;
 static Ally allies[SB_ALLY_LIMIT];
+/* A conservative history filter: false positives cost a scan, false negatives
+ * are impossible because bits are set before a character enters allies. */
+static unsigned int ally_seen_bits[2048];
+static unsigned int ally_seen_bit(void* character) {unsigned int x=(unsigned int)((U64)character>>4);x^=x>>16;x*=0x7feb352du;x^=x>>15;return x&65535u;}
+static int ally_seen_maybe(void* character) {unsigned int bit=ally_seen_bit(character);return (ally_seen_bits[bit>>5]&(1u<<(bit&31)))!=0;}
+static void ally_seen_remember(void* character) {unsigned int bit=ally_seen_bit(character);ally_seen_bits[bit>>5]|=1u<<(bit&31);}
 typedef struct {void* character;void* body;void* bone;void* scene;void* parent;void* node;void* effect;void* effect2;float applied_scale;int element;int secondary;} HandFire;
 static HandFire hand_fires[SB_ALLY_LIMIT*2];
 static void* guard; static DWORD internal; static int active,logged_missing,logged_full; static U64 serial;
@@ -138,7 +144,7 @@ static unsigned int affinity_seed(unsigned int index,unsigned int serial_number)
 /* Temporary test assignment derived from a character handle. It is not saved
  * and may change after an import or other handle reassignment. */
 static int element_from_character(void* character) {const unsigned char* h=(const unsigned char*)character_handle(character);if(!h)return 1;return (int)affinity_seed(*(const unsigned int*)(h+0x14),*(const unsigned int*)(h+0x18));}
-static Ally* set_ally(void* character,void* body,int is_player,void* left,void* right,int unarmed,int element) {int i,slot=-1;if(!character)return 0;for(i=0;i<SB_ALLY_LIMIT;++i){if(allies[i].character==character){slot=i;break;}if(slot<0 && !allies[i].character)slot=i;}if(slot>=0){if(is_player&&body){
+static Ally* set_ally(void* character,void* body,int is_player,void* left,void* right,int unarmed,int element) {int i,slot=-1;if(!character)return 0;if(is_player&&body)ally_seen_remember(character);for(i=0;i<SB_ALLY_LIMIT;++i){if(allies[i].character==character){slot=i;break;}if(slot<0 && !allies[i].character)slot=i;}if(slot>=0){if(is_player&&body){
     if(allies[slot].character!=character){allies[slot].secondary=0;allies[slot].level=0;allies[slot].hit_glow=0.0f;allies[slot].attacking=0;allies[slot].melee_weapon=0;}
 #ifdef SB_ENABLE_PERSISTENCE
     allies[slot].element=element;
@@ -362,7 +368,7 @@ static void character_set_handle_hook(void* character,const void* next) {
 #endif
 static void character_update_hook(void* character) {
     void* app=0;void* body=0;void* skeleton=0;void* left=0;void* right=0;int player=0,unarmed=0,element=1;
-    int secondary=0,level=0,melee=0,boss=0;
+    int secondary=0,level=0,melee=0,boss=0,skip_untracked=0;
 #ifdef SB_ENABLE_TRAIL
     int attacking=0;
 #endif
@@ -372,7 +378,8 @@ static void character_update_hook(void* character) {
     String hands={{"hands"},5,15,0},lb={{"Bip01 L Hand"},12,15,0},rb={{"Bip01 R Hand"},12,15,0};
     if(active && internal!=GetCurrentThreadId())__try {
         player=character_is_player(character);
-        if(!player){AcquireSRWLockExclusive(&guard);__try {__try {boss=boss_diag_character(character);} __except(1) {boss=0;}} __finally {ReleaseSRWLockExclusive(&guard);}}
+        if(!player){AcquireSRWLockExclusive(&guard);__try {__try {boss=boss_diag_character(character);} __except(1) {boss=0;}skip_untracked=!boss&&!ally_seen_maybe(character);} __finally {ReleaseSRWLockExclusive(&guard);}}
+        if(!skip_untracked){
         if(player||boss){element=player?element_from_character(character):boss_profiles[boss-1].primary;melee=melee_context(character);
 #ifdef SB_ENABLE_PERSISTENCE
             {const unsigned char* h=(const unsigned char*)character_handle(character);if(h){index=*(const unsigned int*)(h+0x14);serial_number=*(const unsigned int*)(h+0x18);has_handle=1;}stats=character_stats(character);}
@@ -395,7 +402,7 @@ static void character_update_hook(void* character) {
                 ally->attacking=attacking;
 #endif
             }}
-        } __finally {ReleaseSRWLockExclusive(&guard);}
+        } __finally {ReleaseSRWLockExclusive(&guard);}}
     } __except(1) {logline("SKIP: player identity or hand bones unavailable.\r\n");}original_character_update(character);
 }
 static void character_destroy_hook(void* character) {if(internal!=GetCurrentThreadId()){AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try {clear_crossbow_character(character);clear_character_hands(character);set_ally(character,0,0,0,0,0,0);
@@ -643,6 +650,20 @@ static const void* test_handle(void* c) {(void)c;return test_handle_values;}
 #ifdef SB_ENABLE_PERSISTENCE
 static void* test_stats(void* c) {(void)c;return 0;}
 static void* test_hit_stats(void* c) {(void)c;return (void*)123;}
+__declspec(dllexport) int probeTestAllyHistoryFilter(void)
+{
+    void* a=(void*)0x1040;void* b;unsigned int i,bit;
+    if(ally_seen_maybe(a))return 1;
+    if(!set_ally(a,(void*)0x2000,1,0,0,0,1)||!ally_seen_maybe(a))return 2;
+    if(set_ally(a,0,0,0,0,0,0)||!ally_seen_maybe(a))return 3;
+    if(!set_ally(a,(void*)0x2000,1,0,0,0,1))return 4;
+    bit=ally_seen_bit(a);
+    for(i=0x3000;i<0x1000000;i+=16)if(ally_seen_bit((void*)(U64)i)==bit)break;
+    if(i>=0x1000000)return 5;b=(void*)(U64)i;
+    if(!ally_seen_maybe(b)||set_ally(b,0,0,0,0,0,0))return 6;
+    if(!find_ally((void*)0x2000))return 7;
+    return 0;
+}
 static int test_hit_result;static float test_seen_cut;
 static int test_hit_original(void* target,int dir,void* dmg,void* attacker,void* tech,int combo){(void)target;(void)dir;(void)attacker;(void)tech;(void)combo;if(dmg)test_seen_cut=((SBDamage*)dmg)->cut;return test_hit_result;}
 __declspec(dllexport) int probeTestBossCombatAffinity(void)
