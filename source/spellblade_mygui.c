@@ -8,7 +8,8 @@ static void* make(void* c,void* parent,int kind,int x,int y,int w,int h)
     if(!a||!a->create_widget||!parent)return 0;
     if(kind==SB_UI_PANEL){str(&type,"Widget");str(&skin,"PanelEmpty");}
     else if(kind==SB_UI_BUTTON){str(&type,"Button");str(&skin,"Kenshi_Button1Skin");}
-    else if(kind==SB_UI_LABEL||kind==SB_UI_AXIS_LABEL||kind==SB_UI_BAR_TEXT){str(&type,"TextBox");str(&skin,"Kenshi_TextBoxEmptySkin");}
+    else if(kind==SB_UI_LABEL){str(&type,"TextBox");str(&skin,"Kenshi_TextboxStandardText");}
+    else if(kind==SB_UI_AXIS_LABEL||kind==SB_UI_BAR_TEXT){str(&type,"TextBox");str(&skin,"Kenshi_TextBoxEmptySkin");}
     else if(kind==SB_UI_RADAR){str(&type,"Canvas");str(&skin,"Canvas");}
     else if(kind==SB_UI_BAR_BG){str(&type,"Widget");str(&skin,"Kenshi_ProgressBarEmptySkin");}
     else if(kind==SB_UI_BAR_FILL){str(&type,"Widget");str(&skin,"Kenshi_ProgressBarFilledSkin");}
@@ -22,7 +23,7 @@ static void* make(void* c,void* parent,int kind,int x,int y,int w,int h)
     /* A popup retains its parent lifecycle while escaping its clipping area. */
     if(widget&&a->set_style&&kind==SB_UI_PANEL){SBGameString layer;str(&layer,"Popup");a->set_style(widget,1,&layer);}
     if(widget&&a->set_font&&(kind==SB_UI_BUTTON||kind==SB_UI_LABEL||kind==SB_UI_AXIS_LABEL||kind==SB_UI_BAR_TEXT||kind==SB_UI_WINDOW_TITLE)){str(&font,"Kenshi_PaintedTextFont_Medium");a->set_font(widget,&font);}
-    if(widget&&a->set_property&&(kind==SB_UI_LABEL||kind==SB_UI_AXIS_LABEL)){SBGameString key,value;str(&key,"TextColour");str(&value,"0.0784314 0.0313726 0.0235294");a->set_property(widget,&key,&value);}
+    if(widget&&a->set_property&&kind==SB_UI_AXIS_LABEL){SBGameString key,value;str(&key,"TextColour");str(&value,"0.0784314 0.0313726 0.0235294");a->set_property(widget,&key,&value);}
     if(widget&&a->set_property&&kind==SB_UI_BAR_TEXT){SBGameString key,value;str(&key,"TextColour");str(&value,"0.90 0.86 0.76");a->set_property(widget,&key,&value);}
     if(widget&&a->set_property&&kind==SB_UI_BUTTON){SBGameString key,value;str(&key,"TextAlign");str(&value,"Center");a->set_property(widget,&key,&value);}
     if(widget&&a->set_property&&kind==SB_UI_WINDOW_TITLE){SBGameString key,value;str(&key,"TextColour");str(&value,"0.78 0.72 0.62");a->set_property(widget,&key,&value);str(&key,"TextAlign");str(&value,"Center");a->set_property(widget,&key,&value);}

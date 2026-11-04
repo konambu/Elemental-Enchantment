@@ -45,7 +45,7 @@ int sb_ui_view_build(SBUIView* v,const SBUIViewAPI* a,void* parent,int width,int
     v->mode_second=a->create(a->context,v->body,SB_UI_BUTTON,120,265,130,26);
     v->milestone=a->create(a->context,v->body,SB_UI_LABEL,20,8,230,18);
     v->xp_label=a->create(a->context,v->body,SB_UI_BAR_TEXT,26,298,180,18);
-    v->xp_percent=a->create(a->context,v->body,SB_UI_BAR_TEXT,466,298,40,18);
+    v->xp_percent=a->create(a->context,v->body,SB_UI_BAR_TEXT,450,298,60,18);
     if(!v->mode_main||!v->mode_second||!v->milestone||!v->xp_label||!v->xp_percent)goto fail;a->caption(a->context,v->mode_main,"MAIN");
     return 1;
 fail:sb_ui_view_dispose(v,a);return 0;
