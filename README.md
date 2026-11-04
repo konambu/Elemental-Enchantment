@@ -9,7 +9,7 @@ A work-in-progress Kenshi mod that gives player characters elemental enchantment
 - Kenshi and [RE_Kenshi](https://github.com/BFrizzleFoShizzle/RE_Kenshi), including KenshiLib.
 - Arcane Magic and a dual-wielding mod are not required.
 
-The interface supports Kenshi's nine official languages. Effects apply to player-controlled characters.
+The interface supports Kenshi's nine official languages. Player-controlled characters and selected named bosses can use enchantments. Boss combat effects are experimental.
 
 Crossbow support is experimental: loading and flying bolts have elemental visuals, while damage calculations, armour penetration, bleeding, bolt speed and experience need further testing and may not work correctly. The crossbow projectile visual and bolt-speed hooks are enabled only for the verified RE_Kenshi executable build; other builds leave them disabled.
 
@@ -31,6 +31,6 @@ On Windows, install Python 3 and Visual Studio Build Tools with x64 C++ tools, t
 
 ## 日本語
 
-近接武器・素手・クロスボウに５属性のエンチャントを付与するKenshi用Modです。キャラクターごとの適性と共通のElementalレベルがあり、レベル50で副属性が解放されます。クロスボウの戦闘効果は検証中で、正しく動かない場合があります。
+近接武器・素手・クロスボウに５属性のエンチャントを付与するKenshi用Modです。キャラクターごとの適性と共通のElementalレベルがあり、レベル50で副属性が解放されます。一部のボスも属性を使用します。ボスとクロスボウの戦闘効果は検証中で、正しく動かない場合があります。
 
 ベータ版です。動作にはRE_KenshiとKenshiLibが必要です。Arcane Magicは必要ありません。二刀流には別のModが必要です。

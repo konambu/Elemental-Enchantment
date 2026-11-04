@@ -148,6 +148,69 @@ static void set_ally(void* character,void* body,int is_player,void* left,void* r
     allies[slot].character=character;allies[slot].body=body;allies[slot].left=left;allies[slot].right=right;allies[slot].unarmed=unarmed;}else if(allies[slot].character==character){allies[slot].character=0;allies[slot].body=0;allies[slot].left=0;allies[slot].right=0;allies[slot].unarmed=0;allies[slot].element=0;}}}
 static void forget_body(void* body) {int i;for(i=0;i<SB_ALLY_LIMIT;++i)if(allies[i].body==body){allies[i].character=0;allies[i].body=0;}}
 static void logline(const char* s) { DWORD n=0,w; void* f; while(s[n])++n; f=CreateFileA(log_path,4,3,0,4,0x80,0); if(f!=(void*)(U64)-1) {WriteFile(f,s,n,&w,0);CloseHandle(f);} }
+/* Cache profile IDs for loaded characters. Caller holds guard; cached pointer
+ * values are only compared, never dereferenced. */
+typedef struct { void* character; unsigned int index, generation; int boss_profile; } BossDiagSeen;
+typedef struct { const char *id; int primary,secondary,level; } BossProfile;
+static const BossProfile boss_profiles[]={
+    {"17225-Dialogue.mod",1,2,80}, {"59164-Dialogue.mod",2,1,65},
+    {"59165-Dialogue.mod",1,2,65}, {"51751-Dialogue.mod",2,5,60},
+    {"43159-Dialogue.mod",4,3,80}, {"59030-Dialogue.mod",3,2,90},
+    {"1533858-rebirth.mod",2,5,100}, {"51333-rebirth.mod",5,4,90},
+    {"50350-rebirth.mod",3,5,70}, /* Moll */
+    {"56727-Dialogue.mod",4,1,70}, /* Flying Bull */
+    {"56730-Dialogue.mod",1,3,65}, /* Ghost */
+    {"98164-Dialogue.mod",4,3,65}, /* Tora */
+    {"62981-Dialogue.mod",5,2,85}, /* Savant */
+    {"95756-__december17.mod",1,4,80}, /* Valamon */
+    {"62827-rebirth.mod",4,5,80}, /* Crab Queen */
+    {"62807-rebirth.mod",2,5,85}, /* Skeleton Bandits' Elder */
+    {"96407-Dialogue.mod",4,5,75}, /* King Gurgler */
+    {"48447-Dialogue.mod",4,1,65}, /* Big Grim */
+    {"56576-Dialogue.mod",2,4,85}, /* Eyegore */
+    {"56365-Dialogue.mod",2,5,70}, /* Longen */
+    {"65004-Dialogue.mod",3,1,60}, /* Boss Simion */
+    {"56824-Dialogue.mod",1,2,65}, /* The Preacher */
+    {"56887-Dialogue.mod",3,5,60}, /* Buzan */
+    {"56888-Dialogue.mod",5,3,60}, /* Dimak */
+    {"56889-Dialogue.mod",1,4,60}, /* Red Sabre Boss */
+    {"48718-Dialogue.mod",5,4,60}, /* Big Gray */
+    {"48738-Dialogue.mod",4,1,60}, /* Big Al */
+    {"63884-Dialogue.mod",3,5,65}, /* Shade */
+    {"96409-rebirth.mod",2,1,80}, /* Screamer the False */
+    {"96407-rebirth.mod",5,2,80}, /* Ponk */
+    {"1533326-__world reactions Shek.mod",4,1,85}, /* Mukai */
+    {"50519-rebirth.mod",1,3,75} /* Cannibal Grand Wizard */
+};
+static BossDiagSeen boss_diag_seen[4096];
+static unsigned int boss_diag_count;
+static int boss_diag_character(void* character) {
+    const unsigned char* h; void* data; const String* sid; unsigned int i,index,generation,slot;
+    int profile=0;
+    if(!character)return 0;
+    h=(const unsigned char*)character_handle(character); if(!h)return 0;
+    index=*(const unsigned int*)(h+0x14); generation=*(const unsigned int*)(h+0x18);
+    slot=(index^(generation*2654435761u))&4095u;
+    for(i=0;i<64;++i) { BossDiagSeen* seen=&boss_diag_seen[(slot+i)&4095u];
+        if(seen->character==character && seen->index==index && seen->generation==generation)return seen->boss_profile;
+        if(!seen->character)break;
+    }
+    if(i==64||boss_diag_count>=3072){for(i=0;i<4096;++i)boss_diag_seen[i].character=0;boss_diag_count=0;i=0;}
+    slot=(slot+i)&4095u;
+    data=*(void**)((unsigned char*)character+0x40); if(!data)return 0;
+    sid=(const String*)((unsigned char*)data+0x58);
+    if(!sid->size || sid->size>160 || sid->capacity<sid->size)return 0;
+    { const char* text=sid->capacity<16?sid->text.small:sid->text.heap;
+      unsigned int j;
+      for(j=0;text && j<sizeof(boss_profiles)/sizeof(boss_profiles[0]);++j) {
+        const char* target=boss_profiles[j].id;
+        for(i=0;i<sid->size && target[i] && text[i]==target[i];++i){}
+        if(i==sid->size && !target[i]){ profile=(int)j+1; break; }
+      }
+    }
+    boss_diag_seen[slot].character=character;boss_diag_seen[slot].index=index;boss_diag_seen[slot].generation=generation;boss_diag_seen[slot].boss_profile=profile;++boss_diag_count;
+    return profile;
+}
 #ifdef SB_ENABLE_TRAIL
 #include "spellblade_trail.inl"
 #endif
@@ -186,15 +249,35 @@ static void free_tag_hook(void* skeleton,void* tag) {int i;if(internal==GetCurre
 static void free_object_hook(void* skeleton,void* object) {int i;if(internal==GetCurrentThreadId()){original_free_object(skeleton,object);return;}AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try {for(i=0;i<SB_TRACK_LIMIT;++i)if(entries[i].blade==object && object)erase(&entries[i]);} __finally {internal=0;ReleaseSRWLockExclusive(&guard);}original_free_object(skeleton,object);}
 #ifdef SB_ENABLE_PERSISTENCE
 static int failed_save_read(void* context,int out[3]) {(void)context;(void)out;return -1;}
+/* Caller holds guard. Player saves stay untouched; non-player profiles are
+ * transient and never inserted into persistence or awarded experience. */
+static int combat_affinity_locked(void* character,void* stats,SBAffinity* out)
+{
+    const unsigned char* h; unsigned int index,serial_number; int boss;
+    if(!character||!out)return 0;
+    if(character_is_player(character)) {
+        SBCharacterRecord* r;
+        h=(const unsigned char*)character_handle(character);if(!stats||!h)return 0;
+        index=*(const unsigned int*)(h+0x14);serial_number=*(const unsigned int*)(h+0x18);
+        r=sb_persistence_bind(&persistence,stats,character,index,serial_number,index^(serial_number*0x9e3779b9u),(unsigned int)element_from_character(character));
+        if(!r||r->read_only||!r->affinity.selected)return 0;
+        *out=r->affinity;return 1;
+    }
+    boss=boss_diag_character(character);if(!boss)return 0;
+    { const BossProfile* p=&boss_profiles[boss-1];unsigned int l=(unsigned int)p->level;
+      if(!sb_affinity_create(out,0,(unsigned int)p->primary))return 0;
+      out->xp[0]=(unsigned short)(4u*(20u*l+l*(l-1u)));
+      out->secondary=(unsigned int)p->secondary;
+    }
+    return out->selected!=0;
+}
 static float element_speed(void* stats,float base,int attacking)
 {
     float result=base;if(!active||!stats||internal==GetCurrentThreadId())return base;
     __try {void* character=*(void**)((unsigned char*)stats+0x10);
-        if(character&&character_is_player(character)&&melee_context(character)){const unsigned char* h=(const unsigned char*)character_handle(character);
-            if(h){unsigned int index=*(const unsigned int*)(h+0x14),serial=*(const unsigned int*)(h+0x18);AcquireSRWLockExclusive(&guard);
-                __try {SBCharacterRecord* r=sb_persistence_bind(&persistence,stats,character,index,serial,index^(serial*0x9e3779b9u),(unsigned int)element_from_character(character));if(r&&!r->read_only)result=attacking?sb_affinity_attack_speed(&r->affinity,base):sb_affinity_combat_speed(&r->affinity,base);}
-                __finally {ReleaseSRWLockExclusive(&guard);}
-            }
+        if(character&&melee_context(character)){SBAffinity a;AcquireSRWLockExclusive(&guard);
+            __try {if(combat_affinity_locked(character,stats,&a))result=attacking?sb_affinity_attack_speed(&a,base):sb_affinity_combat_speed(&a,base);}
+            __finally {ReleaseSRWLockExclusive(&guard);}
         }
     } __except(1) {logline("WIND: speed bonus skipped after native error.\r\n");}
     return result;
@@ -205,11 +288,9 @@ static int character_hit_hook(void* target,int direction,void* damage,void* atta
 {
     int result,has_bonus=0;SBDamage original,modified,bonus;
     if(active&&damage&&attacker&&target&&attacker!=target&&internal!=GetCurrentThreadId())__try {
-        if(character_is_player(attacker)&&melee_context(attacker)){void* stats=character_stats(attacker);const unsigned char* h=(const unsigned char*)character_handle(attacker);
-            if(stats&&h){unsigned int index=*(const unsigned int*)(h+0x14),serial=*(const unsigned int*)(h+0x18);AcquireSRWLockExclusive(&guard);
-                __try {SBCharacterRecord* r=sb_persistence_bind(&persistence,stats,attacker,index,serial,index^(serial*0x9e3779b9u),(unsigned int)element_from_character(attacker));if(r&&!r->read_only){original=*(SBDamage*)damage;modified=original;has_bonus=sb_affinity_damage(&r->affinity,&modified);}}
-                __finally {ReleaseSRWLockExclusive(&guard);}
-            }
+        if(melee_context(attacker)){void* stats=character_stats(attacker);SBAffinity a;AcquireSRWLockExclusive(&guard);
+            __try {if(combat_affinity_locked(attacker,stats,&a)){original=*(SBDamage*)damage;modified=original;has_bonus=sb_affinity_damage(&a,&modified);}}
+            __finally {ReleaseSRWLockExclusive(&guard);}
         }
     } __except(1) {has_bonus=0;logline("EFFECT: hit bonus skipped after native error.\r\n");}
     if(has_bonus){bonus.cut=modified.cut-original.cut;bonus.blunt=modified.blunt-original.blunt;bonus.pierce=modified.pierce-original.pierce;bonus.stun=modified.stun-original.stun;bonus.bleed=modified.bleed-original.bleed;bonus.armour=modified.armour-original.armour;
@@ -230,12 +311,11 @@ static void* crossbow_wound_hook(void* medical,unsigned char low,int direction,v
 {
     int applied=0;SBDamage modified,original,bonus;void* result;void* stats=0;unsigned int index=0,serial_number=0;
     if(active&&bolt&&damage&&attacker&&internal!=GetCurrentThreadId())__try {
-        if(character_is_player(attacker)) {const unsigned char* h=(const unsigned char*)character_handle(attacker);stats=character_stats(attacker);
-            if(stats&&h){index=*(const unsigned int*)(h+0x14);serial_number=*(const unsigned int*)(h+0x18);AcquireSRWLockExclusive(&guard);
-                __try {SBCharacterRecord* r=sb_persistence_bind(&persistence,stats,attacker,index,serial_number,index^(serial_number*0x9e3779b9u),(unsigned int)element_from_character(attacker));
-                    if(r&&!r->read_only&&r->affinity.selected){float pierce;original=*(SBDamage*)damage;modified=original;pierce=modified.pierce>0.0f?modified.pierce:0.0f;modified.cut+=pierce;applied=sb_affinity_damage(&r->affinity,&modified);modified.cut-=pierce;}}
-                __finally {ReleaseSRWLockExclusive(&guard);}
-            }
+        {int player=character_is_player(attacker);const unsigned char* h=player?(const unsigned char*)character_handle(attacker):0;void* character_stat=character_stats(attacker);SBAffinity a;
+            if(player&&character_stat&&h){stats=character_stat;index=*(const unsigned int*)(h+0x14);serial_number=*(const unsigned int*)(h+0x18);}
+            AcquireSRWLockExclusive(&guard);
+            __try {if(combat_affinity_locked(attacker,character_stat,&a)){float pierce;original=*(SBDamage*)damage;modified=original;pierce=modified.pierce>0.0f?modified.pierce:0.0f;modified.cut+=pierce;applied=sb_affinity_damage(&a,&modified);modified.cut-=pierce;}}
+            __finally {ReleaseSRWLockExclusive(&guard);}
         }
     } __except(1){applied=0;stats=0;logline("CROSSBOW: damage skipped after error.\r\n");}
     if(applied){bonus.cut=modified.cut-original.cut;bonus.blunt=modified.blunt-original.blunt;bonus.pierce=modified.pierce-original.pierce;bonus.stun=modified.stun-original.stun;bonus.bleed=modified.bleed-original.bleed;bonus.armour=modified.armour-original.armour;
@@ -282,7 +362,7 @@ static void character_set_handle_hook(void* character,const void* next) {
 #endif
 static void character_update_hook(void* character) {
     void* app=0;void* body=0;void* skeleton=0;void* left=0;void* right=0;int player=0,unarmed=0,element=1;
-    int secondary=0,level=0,melee=0;
+    int secondary=0,level=0,melee=0,boss=0;
 #ifdef SB_ENABLE_TRAIL
     int attacking=0;
 #endif
@@ -292,7 +372,8 @@ static void character_update_hook(void* character) {
     String hands={{"hands"},5,15,0},lb={{"Bip01 L Hand"},12,15,0},rb={{"Bip01 R Hand"},12,15,0};
     if(active && internal!=GetCurrentThreadId())__try {
         player=character_is_player(character);
-        if(player){element=element_from_character(character);melee=melee_context(character);
+        if(!player){AcquireSRWLockExclusive(&guard);__try {__try {boss=boss_diag_character(character);} __except(1) {boss=0;}} __finally {ReleaseSRWLockExclusive(&guard);}}
+        if(player||boss){element=player?element_from_character(character):boss_profiles[boss-1].primary;melee=melee_context(character);
 #ifdef SB_ENABLE_PERSISTENCE
             {const unsigned char* h=(const unsigned char*)character_handle(character);if(h){index=*(const unsigned int*)(h+0x14);serial_number=*(const unsigned int*)(h+0x18);has_handle=1;}stats=character_stats(character);}
 #endif
@@ -304,10 +385,11 @@ static void character_update_hook(void* character) {
         }
         AcquireSRWLockExclusive(&guard);
         __try {
+            if(boss){secondary=boss_profiles[boss-1].secondary;level=boss_profiles[boss-1].level;}
 #ifdef SB_ENABLE_PERSISTENCE
             if(player&&body&&has_handle){SBCharacterRecord* r=sb_persistence_bind(&persistence,stats,character,index,serial_number,index^(serial_number*0x9e3779b9u),(unsigned int)element);if(r){element=(int)r->affinity.selected;if(!r->read_only){secondary=(int)r->affinity.secondary;level=(int)sb_affinity_level(&r->affinity,0);}}}
 #endif
-            set_ally(character,body,player,left,right,unarmed,element);
+            set_ally(character,body,player||boss,left,right,unarmed,element);
             {int i;for(i=0;i<SB_ALLY_LIMIT;++i)if(allies[i].character==character){allies[i].secondary=secondary;allies[i].level=level;allies[i].melee_weapon=melee==2;
 #ifdef SB_ENABLE_TRAIL
                 allies[i].attacking=attacking;
@@ -563,6 +645,20 @@ static void* test_stats(void* c) {(void)c;return 0;}
 static void* test_hit_stats(void* c) {(void)c;return (void*)123;}
 static int test_hit_result;static float test_seen_cut;
 static int test_hit_original(void* target,int dir,void* dmg,void* attacker,void* tech,int combo){(void)target;(void)dir;(void)attacker;(void)tech;(void)combo;if(dmg)test_seen_cut=((SBDamage*)dmg)->cut;return test_hit_result;}
+__declspec(dllexport) int probeTestBossCombatAffinity(void)
+{
+    unsigned int slot;SBAffinity a;SBDamage d={10,10,0,0,0,0};
+    sb_persistence_init(&persistence);character_is_player=test_is_player;character_handle=test_handle;
+    test_player_flag=0;test_handle_values[5]=188;test_handle_values[6]=7;
+    slot=(188u^(7u*2654435761u))&4095u;
+    boss_diag_seen[slot].character=(void*)9;boss_diag_seen[slot].index=188;boss_diag_seen[slot].generation=7;boss_diag_seen[slot].boss_profile=1;
+    boss_diag_seen[(slot+1)&4095u].character=(void*)10;boss_diag_seen[(slot+1)&4095u].index=188;boss_diag_seen[(slot+1)&4095u].generation=7;boss_diag_seen[(slot+1)&4095u].boss_profile=0;
+    if(!combat_affinity_locked((void*)9,0,&a)||a.selected!=1||a.secondary!=2||sb_affinity_level(&a,0)!=80)return 1;
+    if(!sb_affinity_damage(&a,&d)||d.blunt<=10.0f||d.armour<=0.0f)return 2;
+    if(combat_affinity_locked((void*)10,0,&a))return 3;
+    boss_diag_seen[slot].character=0;boss_diag_seen[(slot+1)&4095u].character=0;
+    return 0;
+}
 __declspec(dllexport) int probeTestHitXP(void)
 {
     SBCharacterRecord* r;unsigned int old;int i;SBDamage d={10,10,0,0,1,0};
