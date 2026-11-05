@@ -1,3 +1,3 @@
-Initial beta release: Added elemental enchantments, character progression, and visual effects for melee combat.
+Fixed melee attack and block speed bonuses. Wind now increases crossbow reload speed. For Nitoryu, load Elemental Enchantment above Nitoryu.
 
-初回ベータ版：属性エンチャント、キャラクターの成長、近接戦闘用エフェクトを追加。
+近接の攻撃・防御速度補正を修正。風属性にクロスボウの装填速度上昇を追加。Nitoryu併用時はElemental EnchantmentをNitoryuより上に配置してください。

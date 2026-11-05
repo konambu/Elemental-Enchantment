@@ -44,7 +44,7 @@ static int ally_seen_maybe(void* character) {unsigned int bit=ally_seen_bit(char
 static void ally_seen_remember(void* character) {unsigned int bit=ally_seen_bit(character);ally_seen_bits[bit>>5]|=1u<<(bit&31);}
 typedef struct {void* character;void* body;void* bone;void* scene;void* parent;void* node;void* effect;void* effect2;float applied_scale;int element;int secondary;} HandFire;
 static HandFire hand_fires[SB_ALLY_LIMIT*2];
-static void* guard; static DWORD internal; static int active,logged_missing,logged_full; static U64 serial;
+static void* guard; static DWORD internal; static int active,logged_full; static U64 serial;
 static char log_path[1024]; static MODULE self;
 static char settings_path[1024]; static int all_aptitudes;
 #ifdef SB_ENABLE_UI
@@ -126,8 +126,11 @@ static void (*original_stats_destroy)(void*);
 static void (*original_character_set_handle)(void*,const void*);
 static int (*original_character_hit)(void*,int,void*,void*,void*,int);
 static void* (*original_crossbow_wound)(void*,unsigned char,int,void*,int*,void*,int*,void*);
+#ifdef SPELLBLADE_NATIVE_TEST
 static float (*original_attack_speed)(void*);
 static float (*original_block_speed)(void*);
+#endif
+static float (*original_calculate_combat_speed)(void*,float,float,unsigned char);
 #endif
 /* Caller holds guard. Entries contain identities only; no stored character is dereferenced. */
 static Ally* find_ally(void* body) {int i;if(!body)return 0;for(i=0;i<SB_ALLY_LIMIT;++i)if(allies[i].body==body&&allies[i].character)return &allies[i];return 0;}
@@ -153,7 +156,15 @@ static Ally* set_ally(void* character,void* body,int is_player,void* left,void* 
 #endif
     allies[slot].character=character;allies[slot].body=body;allies[slot].left=left;allies[slot].right=right;allies[slot].unarmed=unarmed;return &allies[slot];}else if(allies[slot].character==character){allies[slot].character=0;allies[slot].body=0;allies[slot].left=0;allies[slot].right=0;allies[slot].unarmed=0;allies[slot].element=0;}}return 0;}
 static void forget_body(void* body) {int i;for(i=0;i<SB_ALLY_LIMIT;++i)if(allies[i].body==body){allies[i].character=0;allies[i].body=0;}}
-static void logline(const char* s) { DWORD n=0,w; void* f; while(s[n])++n; f=CreateFileA(log_path,4,3,0,4,0x80,0); if(f!=(void*)(U64)-1) {WriteFile(f,s,n,&w,0);CloseHandle(f);} }
+typedef struct {const char* message;U64 tick;} LogLimit;
+static LogLimit log_limits[64];static void* log_guard;
+static void logline(const char* s) {
+    DWORD n=0,w;void* f;unsigned i,slot=(unsigned)(((U64)s>>4)&63u);U64 now=GetTickCount64();int allowed=0;
+    AcquireSRWLockExclusive(&log_guard);
+    for(i=0;i<64;++i){LogLimit* entry=&log_limits[(slot+i)&63u];if(!entry->message||entry->message==s){if(!entry->message||now-entry->tick>=60000){entry->message=s;entry->tick=now;allowed=1;}break;}}
+    ReleaseSRWLockExclusive(&log_guard);if(!allowed)return;
+    while(s[n])++n;f=CreateFileA(log_path,4,3,0,4,0x80,0);if(f!=(void*)(U64)-1){WriteFile(f,s,n,&w,0);CloseHandle(f);}
+}
 /* Cache profile IDs for loaded characters. Caller holds guard; cached pointer
  * values are only compared, never dereferenced. */
 typedef struct { void* character; unsigned int index, generation; int boss_profile; } BossDiagSeen;
@@ -288,8 +299,11 @@ static float element_speed(void* stats,float base,int attacking)
     } __except(1) {logline("WIND: speed bonus skipped after native error.\r\n");}
     return result;
 }
+static float calculate_combat_speed_hook(void* stats,float weight,float skill,unsigned char is_block){float base=original_calculate_combat_speed(stats,weight,skill,is_block);return element_speed(stats,base,is_block?0:1);}
+#ifdef SPELLBLADE_NATIVE_TEST
 static float attack_speed_hook(void* stats){float base=original_attack_speed(stats);return element_speed(stats,base,1);}
 static float block_speed_hook(void* stats){float base=original_block_speed(stats);return element_speed(stats,base,0);}
+#endif
 static int character_hit_hook(void* target,int direction,void* damage,void* attacker,void* technique,int combo)
 {
     int result,has_bonus=0;SBDamage original,modified,bonus;
@@ -445,7 +459,7 @@ static void update_hands(void* manager,float dt) {
 static void update(float dt) {
     int i; void* manager; const float bounds[6]={0,0,0,60,60,60};
     String fire={{0},17,17,0},light={{0},27,27,0},wind={{0},22,22,0},water={{0},23,23,0},ice={{0},21,21,0};fire.text.heap="SB_Prototype_Fire";light.text.heap="SB_Prototype_LightningBlade";wind.text.heap="SB_Prototype_WindBlade";water.text.heap="SB_Prototype_WaterBlade";ice.text.heap="SB_Prototype_IceBlade";
-    if(dt<0 || dt>.1f)dt=.016f;manager=particle_manager();if(!manager || !particle_template(manager,&fire)){if(!logged_missing){logged_missing=1;logline("WAIT: fire template not loaded yet.\r\n");}return;}
+    if(dt<0 || dt>.1f)dt=.016f;manager=particle_manager();if(!manager || !particle_template(manager,&fire))return;
     AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();
     __try {for(i=0;i<SB_TRACK_LIMIT;++i)if(entries[i].blade) {
         Entry* e=&entries[i];Ally* ally=find_ally(e->owner);void* parent;const Vec* p;const Quat* q;int element=ally?ally->element:0,secondary=ally?ally->secondary:0;const String* tmpl=element==5?&ice:(element==4?&water:(element==3?&wind:(element==2?&light:&fire)));e->level=ally?ally->level:0;
@@ -479,7 +493,7 @@ __declspec(dllexport) void startPlugin(void) {
     MODULE ogre=GetModuleHandleA("OgreMain_x64.dll"),pu=GetModuleHandleA("Plugin_ParticleUniverse_x64.dll"),lib=GetModuleHandleA("KenshiLib.dll"),game=GetModuleHandleA("kenshi_x64.exe");
     int ok=1;DWORD i,last=0;void* stub;void* gpu_stub;void* gpu_target;void* target;void* char_update;void* char_destroy;int (*hook)(void*,void*,void**);long long (*address)(void*);
 #ifdef SB_ENABLE_PERSISTENCE
-    void* stats_load;void* stats_save;void* stats_destroy;void* char_set_handle;void* char_hit;void* attack_speed;void* block_speed;void* crossbow_wound;
+    void* stats_load;void* stats_save;void* stats_destroy;void* char_set_handle;void* char_hit;void* combat_speed_calculate;void* crossbow_wound;
 #endif
 #ifdef SB_ENABLE_UI
     MODULE mygui=GetModuleHandleA("MyGUIEngine_x64.dll");void* ui_update;void* ui_clear;void* ui_destroy;
@@ -522,9 +536,15 @@ __declspec(dllexport) void startPlugin(void) {
     stub=GetProcAddress(lib,"?_DESTRUCTOR@CharStats@@QEAAXXZ");stats_destroy=stub?(void*)(U64)address(stub):0;
     stub=GetProcAddress(lib,"?_NV_setHandle@Character@@QEAAXAEBVhand@@@Z");char_set_handle=stub?(void*)(U64)address(stub):0;
     stub=GetProcAddress(lib,"?_NV_hitByMeleeAttack@Character@@QEAA?AW4HitMaterialType@@W4CutDirection@@AEAVDamages@@PEAV1@PEAVCombatTechniqueData@@H@Z");char_hit=stub?(void*)(U64)address(stub):0;
-    stub=GetProcAddress(lib,"?getAttackSpeed@CharStats@@QEAAMXZ");attack_speed=stub?(void*)(U64)address(stub):0;
-    stub=GetProcAddress(lib,"?getBlockSpeed@CharStats@@QEAAMXZ");block_speed=stub?(void*)(U64)address(stub):0;
-    if(!stats_load||!stats_save||!stats_destroy||!char_set_handle||!char_hit||!attack_speed||!block_speed)ok=0;
+    combat_speed_calculate=0;
+    if(module_matches(game,0x65d604d7,0x232c000))__try {
+        static const unsigned char prologue[]={0x48,0x8b,0xc4,0x48,0x81,0xec,0x98,0,0,0,0x0f,0x29,0x70,0xe8};
+        const unsigned char* code=(const unsigned char*)game+0x882bb0;unsigned j;void* mapped=0;
+        stub=GetProcAddress(lib,"?calculateAttackOrBlockSpeed@CharStats@@QEAAMMM_N@Z");if(stub)mapped=(void*)(U64)address(stub);
+        for(j=0;j<sizeof(prologue)&&code[j]==prologue[j];++j){}
+        if((j==sizeof(prologue)||code[0]==0xe9)&&mapped==(void*)code&&*((const unsigned char*)game+0x897802)==0xe8&&*((const unsigned char*)game+0x897906)==0xe8)combat_speed_calculate=(void*)code;
+    }__except(1){combat_speed_calculate=0;}
+    if(!stats_load||!stats_save||!stats_destroy||!char_set_handle||!char_hit)ok=0;
 #endif
 #ifdef SB_ENABLE_UI
     GAMEAPI(stats_window_width,"?getWidth@GUIWindow@@UEBAHXZ");GAMEAPI(stats_window_height,"?getHeight@GUIWindow@@UEBAHXZ");GAMEAPI(stats_window_visible,"?_NV_isVisible@CharacterStatsWindow@@QEBA_NXZ");
@@ -608,7 +628,6 @@ __declspec(dllexport) void startPlugin(void) {
             if(hook(create,cb_create_hook,(void**)&original_harpoon_create)!=0||!original_harpoon_create)ok=0;
             if(hook(trace,cb_trace_hook,(void**)&original_projectile_trace)!=0||!original_projectile_trace)ok=0;
             if(hook(destroy,cb_destroy_hook,(void**)&original_projectile_destroy)!=0||!original_projectile_destroy)ok=0;
-            if(ok)logline("CROSSBOW: reload, shoot and projectile hooks installed.\r\n");
         }else logline("CROSSBOW: unverified flight entry points; visuals disabled.\r\n");
     }else logline("CROSSBOW: flight unsupported on this executable.\r\n");
 #ifdef SB_ENABLE_PERSISTENCE
@@ -618,8 +637,7 @@ __declspec(dllexport) void startPlugin(void) {
     if(!char_set_handle||hook(char_set_handle,character_set_handle_hook,(void**)&original_character_set_handle)!=0||!original_character_set_handle)ok=0;
     if(!char_hit||hook(char_hit,character_hit_hook,(void**)&original_character_hit)!=0||!original_character_hit)ok=0;
     if(!crossbow_wound||hook(crossbow_wound,crossbow_wound_hook,(void**)&original_crossbow_wound)!=0||!original_crossbow_wound)ok=0;
-    if(!attack_speed||hook(attack_speed,attack_speed_hook,(void**)&original_attack_speed)!=0||!original_attack_speed)ok=0;
-    if(!block_speed||hook(block_speed,block_speed_hook,(void**)&original_block_speed)!=0||!original_block_speed)ok=0;
+    if(!combat_speed_calculate||hook(combat_speed_calculate,calculate_combat_speed_hook,(void**)&original_calculate_combat_speed)!=0||!original_calculate_combat_speed)logline("SPEED: unverified calculation; melee speed bonuses disabled.\r\n");
 #endif
 #ifdef SB_ENABLE_UI
     if(!ui_update||hook(ui_update,stats_window_update_hook,(void**)&original_stats_window_update)!=0||!original_stats_window_update)ok=0;
@@ -628,7 +646,7 @@ __declspec(dllexport) void startPlugin(void) {
     HOOK(mygui,"?injectMousePress@InputManager@MyGUI@@QEAA_NHHUMouseButton@2@@Z",mouse_press_hook,original_mouse_press);
 #endif
     target=gpu_target;if(!ok||!target||hook(target,gpu_hook,(void**)&original_gpu)!=0||!original_gpu){logline("INACTIVE: native hooks unavailable.\r\n");return;}
-    active=1;logline("ACTIVE: elemental enchantment enabled.\r\n");
+    active=1;
 }
 int __stdcall DllMain(MODULE module,DWORD reason,void* unused) {(void)unused;if(reason==1)self=module;return 1;}
 #ifdef SPELLBLADE_NATIVE_TEST
@@ -732,6 +750,26 @@ __declspec(dllexport) int probeTestCrossbowCoordinates(void){static CBFlight f;V
 static unsigned char test_cb_shot_bolt[128],test_cb_shot_bolt2[128];static unsigned char* test_cb_active_bolt=test_cb_shot_bolt;
 static void* test_cb_create_original(void* manager,const void* mesh,const void* material){(void)manager;(void)mesh;(void)material;return test_cb_active_bolt;}
 static void test_cb_shoot_original(void* gun,void* actor,void* target,int stat,const Vec* aim){(void)gun;(void)actor;(void)target;(void)stat;(void)aim;cb_create_hook(0,0,0);*(float*)(test_cb_active_bolt+0x44)=500.0f;}
+__declspec(dllexport) int probeTestSetLogPath(const char* path){unsigned i;if(!path)return 0;for(i=0;i<sizeof(log_path)-1&&path[i];++i)log_path[i]=path[i];log_path[i]=0;return path[i]==0;}
+__declspec(dllexport) int probeTestLogThrottle(void){static const char msg[]="TEST ERROR\r\n";logline(msg);logline(msg);return 0;}
+__declspec(dllexport) int probeTestWindReload(void){SBAffinity a;float rate;
+    if(!sb_affinity_create(&a,1,3))return 1;a.xp[0]=47600;rate=sb_affinity_combat_speed(&a,1.0f);
+    if(rate<1.099f||rate>1.101f||cb_reload_adjust(3.0f,.1f,rate)>2.991f||cb_reload_adjust(3.0f,.1f,rate)<2.989f)return 2;
+    a.selected=1;a.secondary=3;rate=sb_affinity_combat_speed(&a,1.0f);if(rate<1.074f||rate>1.076f)return 3;
+    a.secondary=0;if(cb_reload_adjust(3.0f,.1f,sb_affinity_combat_speed(&a,1.0f))!=3.0f)return 4;
+    if(cb_reload_adjust(.001f,.1f,1.1f)!=0.0f||cb_reload_adjust(3.0f,-1.0f,1.1f)!=3.0f)return 5;return 0;}
+__declspec(dllexport) int probeTestWindReloadIntegration(void){
+    static unsigned char ranged[160];SBCharacterRecord* r;int i;for(i=0;i<160;++i)((volatile unsigned char*)ranged)[i]=0;
+    sb_persistence_init(&persistence);character_is_player=test_is_player;character_handle=test_handle;character_stats=test_hit_stats;
+    test_handle_values[5]=42;test_handle_values[6]=7;test_player_flag=1;active=1;
+    for(i=0;i<SB_ALLY_LIMIT;++i)allies[i].character=0;
+    r=sb_persistence_bind(&persistence,(void*)123,(void*)9,42,7,99,3);if(!r)return 1;r->affinity.xp[0]=47600;
+    allies[0].character=(void*)9;allies[0].element=3;*(void**)(ranged+0x68)=(void*)9;*(int*)ranged=2;*(float*)(ranged+0x74)=6.0f;*(float*)(ranged+0x78)=3.0f;
+    cb_apply_wind_reload(ranged,.1f);if(*(float*)(ranged+0x78)>2.991f||*(float*)(ranged+0x78)<2.989f)return 2;
+    *(float*)(ranged+0x78)=3.0f;r->affinity.selected=1;allies[0].element=1;cb_apply_wind_reload(ranged,.1f);if(*(float*)(ranged+0x78)!=3.0f)return 3;
+    allies[0].secondary=3;r->affinity.secondary=3;cb_apply_wind_reload(ranged,.1f);if(*(float*)(ranged+0x78)>2.993f||*(float*)(ranged+0x78)<2.992f)return 4;
+    *(float*)(ranged+0x78)=3.0f;*(int*)ranged=0;cb_apply_wind_reload(ranged,.1f);if(*(float*)(ranged+0x78)!=3.0f)return 5;
+    active=0;return 0;}
 __declspec(dllexport) int probeTestCrossbowSpeed(void){
     int i;SBCharacterRecord* r;Vec aim={0};
     for(i=0;i<128;++i){((volatile unsigned char*)test_cb_shot_bolt)[i]=0;((volatile unsigned char*)test_cb_shot_bolt2)[i]=0;}test_cb_active_bolt=test_cb_shot_bolt;
@@ -757,11 +795,13 @@ __declspec(dllexport) int probeTestLocaleDetection(void){
     locale_manager_instance=test_locale_manager;locale_current=test_locale_current;ui_locale_ready=0;sb_locale_set("en_GB");select_game_locale();p=sb_locale_get()->id;
     if(p[0]!='j'||p[1]!='a'||!ui_locale_ready)return 1;sb_locale_set("unsupported");p=sb_locale_get()->id;if(p[0]!='e'||p[1]!='n')return 2;sb_locale_set("en_GB");locale_manager_instance=0;locale_current=0;ui_locale_ready=0;return 0;
 }
+__declspec(dllexport) const char* probeTestWindDetail(const char* id){sb_locale_set(id);return sb_locale_get()->winddetail;}
 __declspec(dllexport) const char* probeTestLocaleText(const char* id,int field){const SBLocale* l;sb_locale_set(id);l=sb_locale_get();return field==0?l->id:field==1?l->element[1]:field==2?l->armour:field==3?l->blunt:field==4?l->cut:l->nextlevel;}
 static void test_set_handle_original(void* character,const void* next) {const unsigned int* h=(const unsigned int*)next;test_handle_values[5]=h[5];test_handle_values[6]=h[6];(void)sb_character_observe(&persistence.characters,character,h[5],h[6],123,5);}
 typedef struct SBTestGameData {int value[3];int present;} SBTestGameData;
 typedef struct SBTestStats {U64 padding[2];void* character;} SBTestStats;
 static float test_speed_original(void* stats){(void)stats;return 1.0f;}
+static float test_speed_calculation(void* stats,float weight,float skill,unsigned char block){(void)stats;(void)weight;(void)skill;(void)block;return 1.0f;}
 __declspec(dllexport) int probeTestWindSpeed(void)
 {
     SBTestStats stats={{0,0},(void*)9};SBCharacterRecord* r;float x;
@@ -770,6 +810,7 @@ __declspec(dllexport) int probeTestWindSpeed(void)
     r=sb_persistence_bind(&persistence,&stats,(void*)9,42,7,123,3);if(!r)return 1;
     x=attack_speed_hook(&stats);if(x<1.019f||x>1.021f)return 2;
     r->affinity.xp[0]=47600;x=block_speed_hook(&stats);if(x<1.099f||x>1.101f)return 3;
+    original_calculate_combat_speed=test_speed_calculation;x=calculate_combat_speed_hook(&stats,1.0f,1.0f,1);if(x<1.099f||x>1.101f)return 10;
     r->affinity.selected=1;if(attack_speed_hook(&stats)!=1.0f)return 4;
     r->affinity.selected=2;r->affinity.xp[0]=47600;x=attack_speed_hook(&stats);if(x<1.049f||x>1.051f||block_speed_hook(&stats)!=1.0f)return 6;
     test_weapon_kind=6;if(attack_speed_hook(&stats)!=1.0f)return 7;test_weapon_kind=8;test_ranged_mode=1;if(attack_speed_hook(&stats)<1.049f)return 8;test_weapon_kind=-1;if(attack_speed_hook(&stats)!=1.0f)return 9;test_ranged_mode=0;
