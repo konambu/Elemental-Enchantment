@@ -48,7 +48,7 @@ typedef struct {void* character;void* body;void* bone;void* scene;void* parent;v
 static HandFire hand_fires[SB_ALLY_LIMIT*2];
 static void* guard; static DWORD internal; static int active,logged_full; static U64 serial;
 static char log_path[1024]; static MODULE self;
-static char settings_path[1024]; static int all_aptitudes; static float effect_multiplier=1.0f; static int show_trails=1,show_impacts=1;
+static char settings_path[1024]; static int all_aptitudes; static float effect_multiplier=1.0f; static unsigned int xp_tenths=10; static int show_trails=1,show_impacts=1;
 #ifdef SB_ENABLE_UI
 static void select_game_locale(void);
 #endif
@@ -62,11 +62,13 @@ struct MCM_Api {
     void (__cdecl *number)(MCM_Api*,const char*,const char*,const char*,const char*,float,float,float,int,unsigned);
     void (__cdecl *choice)(MCM_Api*,const char*,const char*,const char*,const char*,const char*,const char* const*,const char* const*,int,unsigned);
 };
-static float parse_effect_multiplier(const char* s){int whole;if(!s||s[0]<'0'||s[0]>'5')return 1.0f;whole=s[0]-'0';if(!s[1])return (float)whole;if(s[1]!='.'||!s[2]||s[3])return 1.0f;if(s[2]=='0')return (float)whole;if(s[2]=='5'&&whole<5)return (float)whole+0.5f;return 1.0f;}
+static unsigned int parse_multiplier_tenths(const char* s,unsigned int maximum){unsigned int whole=0,decimal=0,value;int digits=0;if(!s)return 10;while(*s==' '||*s=='\t')++s;while(*s>='0'&&*s<='9'){if(whole>1000)return maximum;whole=whole*10u+(unsigned int)(*s++-'0');digits=1;}if(!digits)return 10;if(*s=='.'){++s;if(*s>='0'&&*s<='9')decimal=(unsigned int)(*s++-'0');while(*s>='0'&&*s<='9')++s;}while(*s==' '||*s=='\t')++s;if(*s)return 10;value=whole*10u+decimal;return value>maximum?maximum:value;}
 static void __cdecl reload_settings(void) {
     char m[16];if(settings_path[0])GetPrivateProfileStringA("General","EffectMultiplier","1",m,sizeof(m),settings_path);else{m[0]='1';m[1]=0;}
     all_aptitudes=settings_path[0] && GetPrivateProfileIntA("General","AllAptitudes100",0,settings_path)!=0;
-    effect_multiplier=parse_effect_multiplier(m);
+    effect_multiplier=(float)parse_multiplier_tenths(m,50u)/10.0f;
+    if(settings_path[0])GetPrivateProfileStringA("General","ExperienceMultiplier","1",m,sizeof(m),settings_path);else{m[0]='1';m[1]=0;}
+    xp_tenths=parse_multiplier_tenths(m,200u);
     show_trails=!settings_path[0]||GetPrivateProfileIntA("General","ShowWeaponTrails",1,settings_path)!=0;
     show_impacts=!settings_path[0]||GetPrivateProfileIntA("General","ShowImpactEffects",1,settings_path)!=0;
 #ifdef SB_ENABLE_UI
@@ -74,24 +76,25 @@ static void __cdecl reload_settings(void) {
 #endif
 }
 __declspec(dllexport) void __cdecl MCM_Describe(MCM_Api* api) {
-    static const char* const strength_values[]={"0","0.5","1","1.5","2","2.5","3","3.5","4","4.5","5"};
     if(!api || api->version<1 || !api->beginMod || !api->section || !api->toggle || !settings_path[0])return;
 #ifdef SB_ENABLE_UI
     select_game_locale();
 #endif
     api->beginMod(api,"ElementalEnchantment","Elemental Enchantment",settings_path,reload_settings);
 #ifdef SB_ENABLE_UI
-    api->section(api,sb_locale_get()->mcm_section);
-    api->toggle(api,"General","AllAptitudes100",sb_locale_get()->mcm_label,sb_locale_get()->mcm_tip,0,0);
-    {const SBMcmText* t=sb_mcm_text(sb_locale_get()->id);api->section(api,t->section);
-     if(api->choice)api->choice(api,"General","EffectMultiplier",t->strength,t->strength_tip,"1",strength_values,0,11,0);
+    {const SBMcmText* t=sb_mcm_text(sb_locale_get()->id);api->section(api,sb_locale_get()->mcm_section);
+     api->toggle(api,"General","AllAptitudes100",sb_locale_get()->mcm_label,sb_locale_get()->mcm_tip,0,0);
+     if(api->number)api->number(api,"General","ExperienceMultiplier",t->xp,t->xp_tip,1.0f,0.0f,20.0f,1,0);
+     api->section(api,t->section);
+     if(api->number)api->number(api,"General","EffectMultiplier",t->strength,t->strength_tip,1.0f,0.0f,5.0f,1,0);
      api->toggle(api,"General","ShowWeaponTrails",t->trails,t->trails_tip,1,0);
      api->toggle(api,"General","ShowImpactEffects",t->impact,t->impact_tip,1,0);}
 #else
     api->section(api,"Aptitude");
     api->toggle(api,"General","AllAptitudes100","All elemental aptitudes 100%","All characters gain elemental experience at 100% speed.",0,0);
+    if(api->number)api->number(api,"General","ExperienceMultiplier","Elemental XP multiplier","Adjust Elemental XP gain. Aptitudes still apply; 0 stops XP gain.",1.0f,0.0f,20.0f,1,0);
     api->section(api,"Effects");
-    if(api->choice)api->choice(api,"General","EffectMultiplier","Effect strength (x)","0: visuals only; 1: normal; 5: five times.","1",strength_values,0,11,0);
+    if(api->number)api->number(api,"General","EffectMultiplier","Effect strength (x)","0: visuals only; 1: normal; 5: five times.",1.0f,0.0f,5.0f,1,0);
     api->toggle(api,"General","ShowWeaponTrails","Weapon trails","Show weapon trails while attacking.",1,0);
     api->toggle(api,"General","ShowImpactEffects","Impact effects","Show elemental bursts on hits from level 40.",1,0);
 #endif
@@ -347,7 +350,7 @@ static int character_hit_hook(void* target,int direction,void* damage,void* atta
     if(active&&attacker&&target&&attacker!=target&&(result==1||result==2||result==6)&&internal!=GetCurrentThreadId())__try {
         if(character_is_player(attacker)&&melee_context(attacker)){void* stats=character_stats(attacker);const unsigned char* h=(const unsigned char*)character_handle(attacker);
             if(stats&&h){unsigned int index=*(const unsigned int*)(h+0x14),serial=*(const unsigned int*)(h+0x18);AcquireSRWLockExclusive(&guard);
-                __try {SBCharacterRecord* r=sb_persistence_bind(&persistence,stats,attacker,index,serial,index^(serial*0x9e3779b9u),(unsigned int)element_from_character(attacker));if(r&&!r->read_only&&sb_affinity_award_hit_rate(&r->affinity,all_aptitudes)){int k;if(show_impacts&&sb_affinity_level(&r->affinity,0)>=40){impact_queue_character(target,(int)r->affinity.selected,(int)r->affinity.secondary);for(k=0;k<SB_ALLY_LIMIT;++k)if(allies[k].character==attacker){allies[k].hit_glow=.18f;break;}}}}
+                __try {SBCharacterRecord* r=sb_persistence_bind(&persistence,stats,attacker,index,serial,index^(serial*0x9e3779b9u),(unsigned int)element_from_character(attacker));if(r&&!r->read_only&&sb_affinity_award_hit_rate_scaled(&r->affinity,all_aptitudes,xp_tenths)){int k;if(show_impacts&&sb_affinity_level(&r->affinity,0)>=40){impact_queue_character(target,(int)r->affinity.selected,(int)r->affinity.secondary);for(k=0;k<SB_ALLY_LIMIT;++k)if(allies[k].character==attacker){allies[k].hit_glow=.18f;break;}}}}
                 __finally {ReleaseSRWLockExclusive(&guard);}
             }
         }
@@ -371,7 +374,7 @@ static void* crossbow_wound_hook(void* medical,unsigned char low,int direction,v
     }else result=original_crossbow_wound(medical,low,direction,damage,material,attacker,attackdir,bolt);
     if(bolt&&active&&internal!=GetCurrentThreadId()){AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try{void* live_scene=0;Vec live_position;if(result&&impact_scene&&impact_element&&crossbow_impact_sample(bolt,&live_scene,&live_position)&&live_scene==impact_scene)impact_queue_position(live_scene,&live_position,impact_element,impact_secondary);clear_crossbow_projectile(bolt);}__finally{internal=0;ReleaseSRWLockExclusive(&guard);}}
     if(result&&stats&&attacker&&bolt&&active)__try {AcquireSRWLockExclusive(&guard);
-        __try {SBCharacterRecord* r=sb_persistence_bind(&persistence,stats,attacker,index,serial_number,index^(serial_number*0x9e3779b9u),(unsigned int)element_from_character(attacker));if(r&&!r->read_only)sb_affinity_award_hit_rate(&r->affinity,all_aptitudes);}
+        __try {SBCharacterRecord* r=sb_persistence_bind(&persistence,stats,attacker,index,serial_number,index^(serial_number*0x9e3779b9u),(unsigned int)element_from_character(attacker));if(r&&!r->read_only)sb_affinity_award_hit_rate_scaled(&r->affinity,all_aptitudes,xp_tenths);}
         __finally {ReleaseSRWLockExclusive(&guard);}
     }__except(1){logline("CROSSBOW: hit XP skipped after error.\r\n");}
     return result;
@@ -689,6 +692,19 @@ __declspec(dllexport) int probeTestImpactQueue(void){Vec p={1,2,3};int i;void* s
 __declspec(dllexport) int probeTestImpactSetting(void){Vec p={1,2,3};int i;for(i=0;i<SB_IMPACT_LIMIT;++i)impacts[i]=(SBImpact){0};particle_manager=0;show_impacts=0;if(impact_queue_position((void*)123,&p,1,0))return 1;show_impacts=1;if(!impact_queue_position((void*)123,&p,1,0))return 2;show_impacts=0;impact_update(0,.016f);if(impacts[0].scene)return 3;show_impacts=1;return 0;}
 __declspec(dllexport) float probeTestMultiplierFromIni(const char* path){unsigned i;if(!path)return -1.0f;for(i=0;i<sizeof(settings_path)-1&&path[i];++i)settings_path[i]=path[i];settings_path[i]=0;reload_settings();return effect_multiplier;}
 __declspec(dllexport) int probeTestImpactSettingFromIni(const char* path){if(!path)return -1;probeTestMultiplierFromIni(path);return show_impacts;}
+__declspec(dllexport) int probeTestXPSettingFromIni(const char* path){if(!path)return -1;probeTestMultiplierFromIni(path);return (int)xp_tenths;}
+__declspec(dllexport) int probeTestXPScaling(void){SBAffinity base,a,b;int i,record[3];for(i=0;i<10000;++i){sb_affinity_create(&base,(unsigned)i,1);if(base.rates[0]==60)break;}if(i==10000)return 1;
+    a=base;a.xp_fraction=37;if(!sb_affinity_award_hit_rate_scaled(&a,0,0)||a.xp[0]||a.xp_fraction!=37)return 2;
+    a=base;for(i=0;i<25;++i)sb_affinity_award_hit_rate_scaled(&a,0,5);if(a.xp[0]!=30||a.xp_fraction)return 3;
+    a=base;for(i=0;i<25;++i)sb_affinity_award_hit_rate_scaled(&a,0,10);if(a.xp[0]!=60||a.xp_fraction)return 4;
+    a=base;for(i=0;i<25;++i)sb_affinity_award_hit_rate_scaled(&a,0,20);if(a.xp[0]!=120||a.xp_fraction)return 5;
+    a=base;for(i=0;i<25;++i)sb_affinity_award_hit_rate_scaled(&a,1,20);if(a.xp[0]!=200||a.rates[0]!=60)return 6;
+    a=base;sb_affinity_award_hit_rate_scaled(&a,0,5);if(a.xp[0]!=1||a.xp_fraction!=20||!sb_affinity_encode(&a,record)||!sb_affinity_decode(&b,record)||b.xp[0]!=a.xp[0]||b.xp_fraction!=a.xp_fraction)return 7;
+    a=base;a.xp[0]=47599;sb_affinity_award_hit_rate_scaled(&a,1,200);if(a.xp[0]!=47600||a.xp_fraction)return 8;
+    a=base;sb_affinity_select(&a,0);if(sb_affinity_award_hit_rate_scaled(&a,1,200)||a.xp[0])return 9;
+    a=base;for(i=0;i<25;++i)sb_affinity_award_hit_rate_scaled(&a,0,1);if(a.xp[0]!=6||a.xp_fraction)return 10;
+    a=base;for(i=0;i<25;++i)sb_affinity_award_hit_rate_scaled(&a,0,200);if(a.xp[0]!=1200||a.xp_fraction)return 11;
+    return 0;}
 __declspec(dllexport) int probeTestEffectMultiplier(void)
 {
     SBAffinity a;SBDamage original={30,10,0,0,1,0},zero,normal,five,half;int i,j;
@@ -707,19 +723,19 @@ __declspec(dllexport) int probeTestEffectMultiplier(void)
     if(sb_affinity_attack_speed_scaled(&a,1,5)<1.687f||sb_affinity_attack_speed_scaled(&a,1,5)>1.688f)return 8;
     if(sb_affinity_attack_speed_scaled(&a,1,0.5f)<1.068f||sb_affinity_attack_speed_scaled(&a,1,0.5f)>1.069f)return 10;
     a.xp[0]=0;if(!sb_affinity_award_hit(&a)||!a.xp[0])return 9;
-    if(parse_effect_multiplier("0.5")!=0.5f||parse_effect_multiplier("1")!=1.0f||parse_effect_multiplier("1.5")!=1.5f||parse_effect_multiplier("5")!=5.0f||parse_effect_multiplier("5.5")!=1.0f)return 11;
+    if(parse_multiplier_tenths("0.5",50)!=5||parse_multiplier_tenths("1",50)!=10||parse_multiplier_tenths("1.5",50)!=15||parse_multiplier_tenths("5",50)!=50||parse_multiplier_tenths("5.5",50)!=50||parse_multiplier_tenths("20.0",200)!=200||parse_multiplier_tenths("0.1",200)!=1)return 11;
     return 0;
 }
 static int test_mcm_int_seen,test_mcm_toggle_count,test_mcm_bad;
 static void __cdecl test_mcm_begin(MCM_Api* a,const char* id,const char* title,const char* path,void (__cdecl *apply)(void)){(void)a;if(!id||!title||!path||!apply)test_mcm_bad=1;}
 static void __cdecl test_mcm_section(MCM_Api* a,const char* title){(void)a;if(!title||!*title)test_mcm_bad=1;}
 static void __cdecl test_mcm_toggle(MCM_Api* a,const char* section,const char* key,const char* label,const char* tip,int def,unsigned flags){(void)a;(void)section;(void)key;(void)flags;if(!label||!*label||!tip||!*tip||def!=(test_mcm_toggle_count?1:0))test_mcm_bad=1;++test_mcm_toggle_count;}
-static void __cdecl test_mcm_choice(MCM_Api* a,const char* section,const char* key,const char* label,const char* tip,const char* def,const char* const* values,const char* const* labels,int count,unsigned flags){int i;(void)a;(void)section;(void)key;(void)labels;(void)flags;if(!label||!*label||!tip||!*tip||!def||def[0]!='1'||def[1]||!values||count!=11)test_mcm_bad=1;else for(i=0;i<count;++i)if(parse_effect_multiplier(values[i])!=(float)i*0.5f)test_mcm_bad=1;++test_mcm_int_seen;}
+static void __cdecl test_mcm_number(MCM_Api* a,const char* section,const char* key,const char* label,const char* tip,float def,float min,float max,int decimals,unsigned flags){(void)a;(void)section;(void)key;(void)flags;if(!label||!*label||!tip||!*tip||def!=1.0f||min!=0.0f||max!=(test_mcm_int_seen?5.0f:20.0f)||decimals!=1)test_mcm_bad=1;++test_mcm_int_seen;}
 __declspec(dllexport) int probeTestMcmRegistration(void)
 {
-    MCM_Api api={1,0,test_mcm_begin,test_mcm_section,test_mcm_toggle,0,0,test_mcm_choice};char old=settings_path[0];
+    MCM_Api api={1,0,test_mcm_begin,test_mcm_section,test_mcm_toggle,0,test_mcm_number,0};char old=settings_path[0];
     test_mcm_bad=test_mcm_int_seen=test_mcm_toggle_count=0;settings_path[0]='x';MCM_Describe(&api);settings_path[0]=old;
-    return test_mcm_bad||test_mcm_int_seen!=1||test_mcm_toggle_count!=3;
+    return test_mcm_bad||test_mcm_int_seen!=2||test_mcm_toggle_count!=3;
 }
 static Vec* (*test_node_position)(void*,Vec*);
 static float (*test_box_height)(void*);
@@ -784,6 +800,14 @@ __declspec(dllexport) int probeTestHitXP(void)
 __declspec(dllexport) int probeTestHookTargets(void) {return !distinct_hook_targets((void*)1,(void*)2)||distinct_hook_targets((void*)1,(void*)1)||distinct_hook_targets(0,(void*)1);}
 static float test_wound_seen_cut,test_wound_seen_blunt,test_wound_seen_pierce;
 static void* test_crossbow_wound_original(void* a,unsigned char b,int c,void* damage,int* d,void* e,int* f,void* g){SBDamage* x=(SBDamage*)damage;(void)a;(void)b;(void)c;(void)d;(void)e;(void)f;(void)g;test_wound_seen_cut=x->cut;test_wound_seen_blunt=x->blunt;test_wound_seen_pierce=x->pierce;return (void*)1;}
+__declspec(dllexport) int probeTestXPScalingHitHooks(void){SBCharacterRecord* r;SBDamage d={10,10,100,0,1,0};unsigned int old;int fail=0;
+    sb_persistence_init(&persistence);character_is_player=test_is_player;character_handle=test_handle;character_stats=test_hit_stats;original_character_hit=test_hit_original;original_crossbow_wound=test_crossbow_wound_original;test_melee_api();
+    test_handle_values[5]=42;test_handle_values[6]=7;test_player_flag=1;test_hit_result=2;active=1;all_aptitudes=1;
+    r=sb_persistence_bind(&persistence,(void*)123,(void*)9,42,7,99,4);if(!r)return 1;
+    xp_tenths=0;character_hit_hook((void*)8,0,&d,(void*)9,0,0);if(r->affinity.xp[0]||test_seen_cut<=10.0f)fail=2;
+    xp_tenths=20;character_hit_hook((void*)8,0,&d,(void*)9,0,0);if(r->affinity.xp[0]!=8)fail=3;
+    old=r->affinity.xp[0];crossbow_wound_hook((void*)8,0,0,&d,0,(void*)9,0,(void*)7);if(r->affinity.xp[0]!=old+8)fail=4;
+    xp_tenths=10;all_aptitudes=0;active=0;return fail;}
 __declspec(dllexport) int probeTestMultiplierHitHooks(void){
     SBCharacterRecord* r;SBDamage d={30,10,0,0,1,0};float one,five;int fail=0;
     sb_persistence_init(&persistence);character_is_player=test_is_player;character_handle=test_handle;character_stats=test_hit_stats;original_character_hit=test_hit_original;original_crossbow_wound=test_crossbow_wound_original;test_melee_api();

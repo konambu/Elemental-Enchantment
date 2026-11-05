@@ -32,8 +32,10 @@ unsigned int sb_affinity_secondary_percent(const SBAffinity* s)
 {unsigned int l=sb_affinity_level(s,0);return l<50?0:l<60?25:l<70?35:l<80?45:l<90?55:l<100?65:75;}
 unsigned int sb_affinity_level(const SBAffinity* s,unsigned int element)
 {unsigned int lo=0,hi=100,total;if(!s||element>=5)return 0;total=s->xp[0];while(lo<hi){unsigned int mid=(lo+hi+1u)/2u;if(total>=4u*(20u*mid+mid*(mid-1u)))lo=mid;else hi=mid-1u;}return lo;}
+int sb_affinity_award_hit_rate_scaled(SBAffinity* s,int all_aptitudes,unsigned int tenths)
+{unsigned int amount,total;if(!s||!s->selected||s->selected>5)return 0;if(tenths>200)tenths=200;amount=(4u*tenths*(all_aptitudes?100u:(unsigned int)s->rates[s->selected-1]))/10u+s->xp_fraction;total=(unsigned int)s->xp[0]+amount/100u;s->xp_fraction=amount%100u;if(total>=47600u){total=47600u;s->xp_fraction=0;}s->xp[0]=(unsigned short)total;return 1;}
 int sb_affinity_award_hit_rate(SBAffinity* s,int all_aptitudes)
-{unsigned int amount,total;if(!s||!s->selected||s->selected>5)return 0;amount=4u*(all_aptitudes?100u:(unsigned int)s->rates[s->selected-1])+s->xp_fraction;total=(unsigned int)s->xp[0]+amount/100u;s->xp_fraction=amount%100u;if(total>=47600u){total=47600u;s->xp_fraction=0;}s->xp[0]=(unsigned short)total;return 1;}
+{return sb_affinity_award_hit_rate_scaled(s,all_aptitudes,10u);}
 int sb_affinity_award_hit(SBAffinity* s) {return sb_affinity_award_hit_rate(s,0);}
 static float element_weight(const SBAffinity* s,unsigned int e)
 {if(!s||!s->selected)return 0.0f;if(s->selected==e)return 1.0f;if(s->secondary==e)return (float)sb_affinity_secondary_percent(s)/100.0f;return 0.0f;}

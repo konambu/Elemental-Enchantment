@@ -19,6 +19,7 @@ int sb_affinity_select(SBAffinity*, unsigned int element);
 int sb_affinity_select_secondary(SBAffinity*, unsigned int element);
 unsigned int sb_affinity_secondary_percent(const SBAffinity*);
 int sb_affinity_award_hit_rate(SBAffinity* s,int all_aptitudes);
+int sb_affinity_award_hit_rate_scaled(SBAffinity* s,int all_aptitudes,unsigned int tenths);
 int sb_affinity_award_hit(SBAffinity*);
 unsigned int sb_affinity_level(const SBAffinity*,unsigned int element);
 typedef struct SBDamage {float cut,blunt,pierce,stun,bleed,armour;} SBDamage;

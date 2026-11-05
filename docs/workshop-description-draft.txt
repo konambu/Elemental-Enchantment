@@ -4,8 +4,7 @@ Enchant melee weapons, fists and crossbows with elemental power.
 Choose a main element for each character, raise their Elemental level, and eventually combine two elements.
 
 [b]Crossbow beta:[/b] Elemental effects appear while loading and on flying bolts.
-Elements can also affect combat and reload speed.
-Please report any issues.
+Elements also affect combat and reload speed.
 
 [h2]Elements[/h2]
 Main element bonuses at level 0–100, with default 1x strength:
@@ -26,10 +25,11 @@ Open the character's stats and select ENCHANTMENT to choose elements and view ap
 [h2]Mod Config Menu settings (optional)[/h2]
 Options > MCM > Elemental Enchantment:
 [list]
-[*][b]Effect strength[/b]: 0x–5x in 0.5x steps (default 1x). At 0x, enjoy visuals only; experience still works. Applies to allies and enchanted bosses.
+[*][b]Elemental XP[/b]: 0x–20x (default 1x).
+[*][b]Effect strength[/b]: 0x–5x (default 1x). At 0x, enjoy visuals only; experience still works. Applies to allies and enchanted bosses.
 [*][b]Weapon trails[/b]: Toggle attack trails without affecting other visuals.
 [*][b]Impact effects[/b]: Toggle level 40+ hit bursts.
-[*][b]All elemental aptitudes 100%[/b]: Remove player characters' experience penalties. Off by default; disabling restores original aptitudes.
+[*][b]All elemental aptitudes 100%[/b]: Remove player XP penalties. Off by default; disabling restores original aptitudes.
 [/list]
 
 [h2]Progression[/h2]
@@ -56,7 +56,6 @@ Beta: please report any issues!
 
 [b]クロスボウ対応はベータ版です。[/b]
 装填中と飛翔中のボルトに属性エフェクトが付き、属性に応じて戦闘効果や装填速度も変化します。
-不具合があれば教えてください。
 
 [h2]属性ごとの効果[/h2]
 主属性・倍率１倍でのレベル０〜100の数値です。副属性にはその強さに応じた補正がかかります。
@@ -77,10 +76,11 @@ Beta: please report any issues!
 [h2]Mod Config Menuの設定（任意）[/h2]
 設定 → MCM → Elemental Enchantment：
 [list]
-[*][b]属性効果の倍率[/b]：０〜５倍を0.5倍刻みで調整（初期値１倍）。０倍は見た目だけになり、経験値は入ります。仲間と属性付きボスに適用。
-[*][b]武器の軌跡[/b]：攻撃時の軌跡をオン・オフ。他のエフェクトは残ります。
+[*][b]属性経験値[/b]：０〜20倍（初期１倍）。
+[*][b]属性効果の倍率[/b]：０〜５倍（初期１倍）。０倍は見た目だけになり、経験値は入ります。仲間と属性付きボスに適用。
+[*][b]武器の軌跡[/b]：攻撃時の軌跡をオン・オフ。
 [*][b]命中エフェクト[/b]：レベル40からの命中演出をオン・オフ。
-[*][b]全属性の適性100%[/b]：仲間の経験値減少をなくします。初期設定はオフ。オフに戻すと元の適性が適用されます。
+[*][b]全属性の適性100%[/b]：仲間の経験値減少をなくします。初期値オフ。オフで元の適性に戻ります。
 [/list]
 
 [h2]レベルごとの解放[/h2]

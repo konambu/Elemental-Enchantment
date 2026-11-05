@@ -1,8 +1,8 @@
 #include "spellblade_ui_view.h"
 #include "spellblade_localization.h"
 static const int ring_order[5]={0,2,4,3,1};
-static unsigned int ui_effect_half_steps=2;
-void sb_ui_view_set_effect_multiplier(float multiplier){ui_effect_half_steps=!(multiplier>0.0f)?0:multiplier>=5.0f?10:(unsigned int)(multiplier*2.0f+0.5f);}
+static unsigned int ui_effect_tenths=10;
+void sb_ui_view_set_effect_multiplier(float multiplier){ui_effect_tenths=!(multiplier>0.0f)?0:multiplier>=5.0f?50:(unsigned int)(multiplier*10.0f+0.5f);}
 static int add(char* out,int pos,int cap,const char* text){while(text&&*text&&pos<cap-1)out[pos++]=*text++;out[pos]=0;return pos;}
 static int num(char* out,int pos,int cap,unsigned value){char tmp[12];int n=0;do{tmp[n++]=(char)('0'+value%10);value/=10;}while(value&&n<11);while(n&&pos<cap-1)out[pos++]=tmp[--n];out[pos]=0;return pos;}
 static void decimal(char* out,int cap,const char* label,unsigned value,int percent){int n=0;n=add(out,n,cap,label);n=add(out,n,cap," +");n=num(out,n,cap,value/10);n=add(out,n,cap,".");n=num(out,n,cap,value%10);if(percent)add(out,n,cap,"%");}
@@ -60,17 +60,17 @@ static unsigned int progress(char out[32],const SBAffinity* a){unsigned int n,le
 static void effect_text(char out[256],char detail_out[256],const char** detail,const SBAffinity* a,unsigned int weight)
 {
     const SBLocale* l=sb_locale_get();unsigned int level=ui_level(a),value,e=a->selected;
-    weight*=ui_effect_half_steps;
+    weight*=ui_effect_tenths;
     if(!e||e>5){add(out,0,256,l->noelement);*detail=l->choose;return;}
-    if(e==1){value=50u+level;decimal(out,256,l->blunt,(value*weight+100u)/200u,1);*detail=l->base;}
-    else if(e==2){value=50u+level;decimal(out,256,l->armour,(value*weight+100u)/200u,1);decimal(detail_out,256,l->bolt,((10u+(4u*level+5u)/10u)*weight+100u)/200u,1);*detail=detail_out;}
-    else if(e==3){value=20u+(8u*level+5u)/10u;decimal(out,256,l->attackblock,(value*weight+100u)/200u,1);*detail=l->winddetail;}
-    else if(e==4){value=50u+level;decimal(out,256,l->cut,(value*weight+100u)/200u,1);*detail=l->base;}
-    else {int n=0;value=(10u+(40u*level)/100u)*weight;value=(value+100u)/200u;n=add(out,n,256,l->bleed);n=add(out,n,256," +");n=num(out,n,256,value/100);n=add(out,n,256,".");if(value%100<10)n=add(out,n,256,"0");num(out,n,256,value%100);decimal(detail_out,256,l->cut,((20u+(8u*level+5u)/10u)*weight+100u)/200u,1);*detail=detail_out;}
+    if(e==1){value=50u+level;decimal(out,256,l->blunt,(value*weight+500u)/1000u,1);*detail=l->base;}
+    else if(e==2){value=50u+level;decimal(out,256,l->armour,(value*weight+500u)/1000u,1);decimal(detail_out,256,l->bolt,((10u+(4u*level+5u)/10u)*weight+500u)/1000u,1);*detail=detail_out;}
+    else if(e==3){value=20u+(8u*level+5u)/10u;decimal(out,256,l->attackblock,(value*weight+500u)/1000u,1);*detail=l->winddetail;}
+    else if(e==4){value=50u+level;decimal(out,256,l->cut,(value*weight+500u)/1000u,1);*detail=l->base;}
+    else {int n=0;value=(10u+(40u*level)/100u)*weight;value=(value+500u)/1000u;n=add(out,n,256,l->bleed);n=add(out,n,256," +");n=num(out,n,256,value/100);n=add(out,n,256,".");if(value%100<10)n=add(out,n,256,"0");num(out,n,256,value%100);decimal(detail_out,256,l->cut,((20u+(8u*level+5u)/10u)*weight+500u)/1000u,1);*detail=detail_out;}
 }
 #ifdef SPELLBLADE_NATIVE_TEST
 static int ui_test_has(const char* s,const char* part){int i,j;for(i=0;s[i];++i){for(j=0;part[j]&&s[i+j]==part[j];++j){}if(!part[j])return 1;}return 0;}
-__declspec(dllexport) int probeTestHalfEffectDisplay(void){SBAffinity a;char out[256],detail_out[256];const char* detail;sb_locale_set("en_GB");sb_affinity_create(&a,1,1);a.xp[0]=47600;sb_ui_view_set_effect_multiplier(0.5f);effect_text(out,detail_out,&detail,&a,100);if(!ui_test_has(out,"7.5%"))return 1;sb_affinity_select(&a,5);effect_text(out,detail_out,&detail,&a,100);if(!ui_test_has(out,"0.25"))return 2;sb_ui_view_set_effect_multiplier(1.0f);return 0;}
+__declspec(dllexport) int probeTestHalfEffectDisplay(void){SBAffinity a;char out[256],detail_out[256];const char* detail;sb_locale_set("en_GB");sb_affinity_create(&a,1,1);a.xp[0]=47600;sb_ui_view_set_effect_multiplier(0.5f);effect_text(out,detail_out,&detail,&a,100);if(!ui_test_has(out,"7.5%"))return 1;sb_ui_view_set_effect_multiplier(0.3f);effect_text(out,detail_out,&detail,&a,100);if(!ui_test_has(out,"4.5%"))return 3;sb_ui_view_set_effect_multiplier(0.5f);sb_affinity_select(&a,5);effect_text(out,detail_out,&detail,&a,100);if(!ui_test_has(out,"0.25"))return 2;sb_ui_view_set_effect_multiplier(1.0f);return 0;}
 #endif
 static void milestone_text(char out[256],unsigned int level){const SBLocale* l=sb_locale_get();int n=0;unsigned int dest=0,pct=0;const char* what=0;if(level>=100){add(out,0,256,l->master);return;}if(level<20){what=l->trail;dest=20;}else if(level<40){what=l->glow;dest=40;}else if(level<50){what=l->dual;dest=50;}else {what=l->second;if(level<60){dest=60;pct=35;}else if(level<70){dest=70;pct=45;}else if(level<80){dest=80;pct=55;}else if(level<90){dest=90;pct=65;}else {dest=100;pct=75;}}n=add(out,n,256,l->next);n=add(out,n,256,": ");n=add(out,n,256,what);if(pct){n=add(out,n,256," ");n=num(out,n,256,pct);n=add(out,n,256,"%");}n=add(out,n,256," ");n=add(out,n,256,l->level);num(out,n,256,dest);}
 void sb_ui_view_sync(SBUIView* v,const SBUIViewAPI* a,void* window,void* character,unsigned int index,unsigned int serial,const SBAffinity* affinity,int editable)
