@@ -8,7 +8,7 @@ Elements can also affect combat and reload speed.
 Please report any issues.
 
 [h2]Elements[/h2]
-Melee bonuses grow with the shared Elemental level. The numbers below are for a main element at level 0–100; secondary bonuses are scaled by the secondary element's strength.
+Bonuses grow with the shared Elemental level. The numbers below are for a main element at level 0–100; secondary bonuses are scaled by the secondary element's strength.
 [list]
 [*][b]Fire[/b]: Adds blunt damage equal to 5–15% of the attack's base cut and blunt damage.
 [*][b]Lightning[/b]: Adds 5–15% armour penetration and increases attack speed by 1–5%.
@@ -56,7 +56,7 @@ This is an initial beta. Please report any problems you encounter!
 不具合があれば教えてください。
 
 [h2]属性ごとの効果[/h2]
-以下は近接攻撃で主属性を使った場合のElementalレベル0〜100の数値です。副属性の効果は、その時点の副属性の強さに応じて小さくなります。
+以下は主属性を使った場合のElementalレベル0〜100の数値です。副属性の効果は、その時点の副属性の強さに応じて小さくなります。
 [list]
 [*][b]火[/b]：攻撃の基本切断＋打撃ダメージの5〜15%を打撃ダメージとして追加。
 [*][b]雷[/b]：防具貫通を5〜15%追加し、攻撃速度を1〜5%上昇。
