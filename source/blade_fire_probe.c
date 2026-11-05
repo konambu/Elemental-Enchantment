@@ -48,7 +48,7 @@ typedef struct {void* character;void* body;void* bone;void* scene;void* parent;v
 static HandFire hand_fires[SB_ALLY_LIMIT*2];
 static void* guard; static DWORD internal; static int active,logged_full; static U64 serial;
 static char log_path[1024]; static MODULE self;
-static char settings_path[1024]; static int all_aptitudes; static float effect_multiplier=1.0f; static int show_trails=1;
+static char settings_path[1024]; static int all_aptitudes; static float effect_multiplier=1.0f; static int show_trails=1,show_impacts=1;
 #ifdef SB_ENABLE_UI
 static void select_game_locale(void);
 #endif
@@ -68,6 +68,7 @@ static void __cdecl reload_settings(void) {
     all_aptitudes=settings_path[0] && GetPrivateProfileIntA("General","AllAptitudes100",0,settings_path)!=0;
     effect_multiplier=parse_effect_multiplier(m);
     show_trails=!settings_path[0]||GetPrivateProfileIntA("General","ShowWeaponTrails",1,settings_path)!=0;
+    show_impacts=!settings_path[0]||GetPrivateProfileIntA("General","ShowImpactEffects",1,settings_path)!=0;
 #ifdef SB_ENABLE_UI
     sb_ui_view_set_effect_multiplier(effect_multiplier);
 #endif
@@ -84,13 +85,15 @@ __declspec(dllexport) void __cdecl MCM_Describe(MCM_Api* api) {
     api->toggle(api,"General","AllAptitudes100",sb_locale_get()->mcm_label,sb_locale_get()->mcm_tip,0,0);
     {const SBMcmText* t=sb_mcm_text(sb_locale_get()->id);api->section(api,t->section);
      if(api->choice)api->choice(api,"General","EffectMultiplier",t->strength,t->strength_tip,"1",strength_values,0,11,0);
-     api->toggle(api,"General","ShowWeaponTrails",t->trails,t->trails_tip,1,0);}
+     api->toggle(api,"General","ShowWeaponTrails",t->trails,t->trails_tip,1,0);
+     api->toggle(api,"General","ShowImpactEffects",t->impact,t->impact_tip,1,0);}
 #else
     api->section(api,"Aptitude");
     api->toggle(api,"General","AllAptitudes100","All elemental aptitudes 100%","All characters gain elemental experience at 100% speed.",0,0);
     api->section(api,"Effects");
     if(api->choice)api->choice(api,"General","EffectMultiplier","Effect strength (x)","0: visuals only; 1: normal; 5: five times.","1",strength_values,0,11,0);
     api->toggle(api,"General","ShowWeaponTrails","Weapon trails","Show weapon trails while attacking.",1,0);
+    api->toggle(api,"General","ShowImpactEffects","Impact effects","Show elemental bursts on hits from level 40.",1,0);
 #endif
 }
 
@@ -98,6 +101,11 @@ static void clear_crossbow_scene(void*);
 static void clear_crossbow_character(void*);
 static void clear_crossbow_source(void*);
 static void clear_crossbow_projectile(void*);
+static void impact_clear_scene(void*);
+static void impact_clear_parent(void*);
+static void impact_queue_character(void*,int,int);
+static int impact_queue_position(void*,const Vec*,int,int);
+static int crossbow_impact_sample(void*,void**,Vec*);
 static void* entity_vtable;
 static void* (*entity_mesh)(void*); static const String* (*resource_name)(void*);
 static void* (*mesh_bounds)(void*); static const Vec* (*bounds_maximum)(void*);
@@ -277,9 +285,9 @@ static void* attach_hook(void* owner,const void* bone,void* object,const void* o
 }
 static void detach_hook(void* owner,void* blade) {int i;if(internal==GetCurrentThreadId()){original_detach(owner,blade);return;}AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try {for(i=0;i<SB_TRACK_LIMIT;++i)if(entries[i].owner==owner && entries[i].blade==blade)erase(&entries[i]);} __finally {internal=0;ReleaseSRWLockExclusive(&guard);}original_detach(owner,blade);}
 static void detach_all_hook(void* owner) {int i;if(internal==GetCurrentThreadId()){original_detach_all(owner);return;}AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try {for(i=0;i<SB_TRACK_LIMIT;++i)if(entries[i].owner==owner)erase(&entries[i]);} __finally {internal=0;ReleaseSRWLockExclusive(&guard);}original_detach_all(owner);}
-static void clear_hook(void* scene) {int i;if(internal==GetCurrentThreadId()){original_clear(scene);return;}AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try {clear_crossbow_scene(scene);for(i=0;i<SB_TRACK_LIMIT;++i)if(entries[i].blade && (!entries[i].scene || entries[i].scene==scene))erase(&entries[i]);for(i=0;i<SB_ALLY_LIMIT*2;++i)if(hand_fires[i].scene==scene)clear_hand(&hand_fires[i]);for(i=0;i<SB_ALLY_LIMIT;++i){allies[i].character=0;allies[i].body=0;}} __finally {internal=0;ReleaseSRWLockExclusive(&guard);}original_clear(scene);}
+static void clear_hook(void* scene) {int i;if(internal==GetCurrentThreadId()){original_clear(scene);return;}AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try {impact_clear_scene(scene);clear_crossbow_scene(scene);for(i=0;i<SB_TRACK_LIMIT;++i)if(entries[i].blade && (!entries[i].scene || entries[i].scene==scene))erase(&entries[i]);for(i=0;i<SB_ALLY_LIMIT*2;++i)if(hand_fires[i].scene==scene)clear_hand(&hand_fires[i]);for(i=0;i<SB_ALLY_LIMIT;++i){allies[i].character=0;allies[i].body=0;}} __finally {internal=0;ReleaseSRWLockExclusive(&guard);}original_clear(scene);}
 static void entity_hook(void* scene,void* object) {int i;if(internal==GetCurrentThreadId()){original_destroy_entity(scene,object);return;}AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try {for(i=0;i<SB_TRACK_LIMIT;++i)if(entries[i].owner==object || entries[i].blade==object)erase(&entries[i]);for(i=0;i<SB_ALLY_LIMIT*2;++i)if(hand_fires[i].body==object)clear_hand(&hand_fires[i]);forget_body(object);} __finally {internal=0;ReleaseSRWLockExclusive(&guard);}original_destroy_entity(scene,object);}
-static void node_hook(void* scene,void* node) {int i;if(internal==GetCurrentThreadId()){original_destroy_node(scene,node);return;}AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try {clear_crossbow_source(node);for(i=0;i<SB_TRACK_LIMIT;++i)if(entries[i].parent==node)erase(&entries[i]);for(i=0;i<SB_ALLY_LIMIT*2;++i)if(hand_fires[i].parent==node)clear_hand(&hand_fires[i]);} __finally {internal=0;ReleaseSRWLockExclusive(&guard);}original_destroy_node(scene,node);}
+static void node_hook(void* scene,void* node) {int i;if(internal==GetCurrentThreadId()){original_destroy_node(scene,node);return;}AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try {impact_clear_parent(node);clear_crossbow_source(node);for(i=0;i<SB_TRACK_LIMIT;++i)if(entries[i].parent==node)erase(&entries[i]);for(i=0;i<SB_ALLY_LIMIT*2;++i)if(hand_fires[i].parent==node)clear_hand(&hand_fires[i]);} __finally {internal=0;ReleaseSRWLockExclusive(&guard);}original_destroy_node(scene,node);}
 static void scene_detach_hook(void* node,void* object) {int i;if(internal==GetCurrentThreadId()){original_scene_detach(node,object);return;}AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try {for(i=0;i<SB_TRACK_LIMIT;++i)if(entries[i].owner==object)cleanup(&entries[i]);for(i=0;i<SB_ALLY_LIMIT*2;++i)if(hand_fires[i].body==object)clear_hand(&hand_fires[i]);} __finally {internal=0;ReleaseSRWLockExclusive(&guard);}original_scene_detach(node,object);}
 static void free_tag_hook(void* skeleton,void* tag) {int i;if(internal==GetCurrentThreadId()){original_free_tag(skeleton,tag);return;}AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try {for(i=0;i<SB_TRACK_LIMIT;++i)if(entries[i].tag==tag && tag)erase(&entries[i]);} __finally {internal=0;ReleaseSRWLockExclusive(&guard);}original_free_tag(skeleton,tag);}
 static void free_object_hook(void* skeleton,void* object) {int i;if(internal==GetCurrentThreadId()){original_free_object(skeleton,object);return;}AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try {for(i=0;i<SB_TRACK_LIMIT;++i)if(entries[i].blade==object && object)erase(&entries[i]);} __finally {internal=0;ReleaseSRWLockExclusive(&guard);}original_free_object(skeleton,object);}
@@ -339,7 +347,7 @@ static int character_hit_hook(void* target,int direction,void* damage,void* atta
     if(active&&attacker&&target&&attacker!=target&&(result==1||result==2||result==6)&&internal!=GetCurrentThreadId())__try {
         if(character_is_player(attacker)&&melee_context(attacker)){void* stats=character_stats(attacker);const unsigned char* h=(const unsigned char*)character_handle(attacker);
             if(stats&&h){unsigned int index=*(const unsigned int*)(h+0x14),serial=*(const unsigned int*)(h+0x18);AcquireSRWLockExclusive(&guard);
-                __try {SBCharacterRecord* r=sb_persistence_bind(&persistence,stats,attacker,index,serial,index^(serial*0x9e3779b9u),(unsigned int)element_from_character(attacker));if(r&&!r->read_only&&sb_affinity_award_hit_rate(&r->affinity,all_aptitudes)){int k;if(sb_affinity_level(&r->affinity,0)>=40)for(k=0;k<SB_ALLY_LIMIT;++k)if(allies[k].character==attacker){allies[k].hit_glow=.18f;break;}}}
+                __try {SBCharacterRecord* r=sb_persistence_bind(&persistence,stats,attacker,index,serial,index^(serial*0x9e3779b9u),(unsigned int)element_from_character(attacker));if(r&&!r->read_only&&sb_affinity_award_hit_rate(&r->affinity,all_aptitudes)){int k;if(show_impacts&&sb_affinity_level(&r->affinity,0)>=40){impact_queue_character(target,(int)r->affinity.selected,(int)r->affinity.secondary);for(k=0;k<SB_ALLY_LIMIT;++k)if(allies[k].character==attacker){allies[k].hit_glow=.18f;break;}}}}
                 __finally {ReleaseSRWLockExclusive(&guard);}
             }
         }
@@ -348,12 +356,12 @@ static int character_hit_hook(void* target,int direction,void* damage,void* atta
 }
 static void* crossbow_wound_hook(void* medical,unsigned char low,int direction,void* damage,int* material,void* attacker,int* attackdir,void* bolt)
 {
-    int applied=0;SBDamage modified,original,bonus;void* result;void* stats=0;unsigned int index=0,serial_number=0;
+    int applied=0,impact_element=0,impact_secondary=0;SBDamage modified,original,bonus;void* result;void* stats=0;void* impact_scene=0;Vec impact_position={0};unsigned int index=0,serial_number=0;
     if(active&&bolt&&damage&&attacker&&internal!=GetCurrentThreadId())__try {
         {int player=character_is_player(attacker);const unsigned char* h=player?(const unsigned char*)character_handle(attacker):0;void* character_stat=character_stats(attacker);SBAffinity a;
             if(player&&character_stat&&h){stats=character_stat;index=*(const unsigned int*)(h+0x14);serial_number=*(const unsigned int*)(h+0x18);}
             AcquireSRWLockExclusive(&guard);
-            __try {if(combat_affinity_locked(attacker,character_stat,&a)){float pierce;original=*(SBDamage*)damage;modified=original;pierce=modified.pierce>0.0f?modified.pierce:0.0f;modified.cut+=pierce;applied=sb_affinity_damage_scaled(&a,&modified,effect_multiplier);modified.cut-=pierce;}}
+            __try {if(combat_affinity_locked(attacker,character_stat,&a)){float pierce;if(show_impacts&&player&&sb_affinity_level(&a,0)>=40&&crossbow_impact_sample(bolt,&impact_scene,&impact_position)){impact_element=(int)a.selected;impact_secondary=(int)a.secondary;}original=*(SBDamage*)damage;modified=original;pierce=modified.pierce>0.0f?modified.pierce:0.0f;modified.cut+=pierce;applied=sb_affinity_damage_scaled(&a,&modified,effect_multiplier);modified.cut-=pierce;}}
             __finally {ReleaseSRWLockExclusive(&guard);}
         }
     } __except(1){applied=0;stats=0;logline("CROSSBOW: damage skipped after error.\r\n");}
@@ -361,7 +369,7 @@ static void* crossbow_wound_hook(void* medical,unsigned char low,int direction,v
         result=original_crossbow_wound(medical,low,direction,&modified,material,attacker,attackdir,bolt);
         __try {SBDamage* d=(SBDamage*)damage;d->cut=modified.cut-bonus.cut;d->blunt=modified.blunt-bonus.blunt;d->pierce=modified.pierce-bonus.pierce;d->stun=modified.stun-bonus.stun;d->bleed=modified.bleed-bonus.bleed;d->armour=modified.armour-bonus.armour;}__except(1){}
     }else result=original_crossbow_wound(medical,low,direction,damage,material,attacker,attackdir,bolt);
-    if(bolt&&active&&internal!=GetCurrentThreadId()){AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try{clear_crossbow_projectile(bolt);}__finally{internal=0;ReleaseSRWLockExclusive(&guard);}}
+    if(bolt&&active&&internal!=GetCurrentThreadId()){AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try{void* live_scene=0;Vec live_position;if(result&&impact_scene&&impact_element&&crossbow_impact_sample(bolt,&live_scene,&live_position)&&live_scene==impact_scene)impact_queue_position(live_scene,&live_position,impact_element,impact_secondary);clear_crossbow_projectile(bolt);}__finally{internal=0;ReleaseSRWLockExclusive(&guard);}}
     if(result&&stats&&attacker&&bolt&&active)__try {AcquireSRWLockExclusive(&guard);
         __try {SBCharacterRecord* r=sb_persistence_bind(&persistence,stats,attacker,index,serial_number,index^(serial_number*0x9e3779b9u),(unsigned int)element_from_character(attacker));if(r&&!r->read_only)sb_affinity_award_hit_rate(&r->affinity,all_aptitudes);}
         __finally {ReleaseSRWLockExclusive(&guard);}
@@ -455,6 +463,7 @@ static void* create_secondary_effect(void* manager,void* scene,void* node,const 
     if(height>0.0f){tech=particle_technique(effect,0);emitter=tech?technique_emitter(tech,0):0;if(!emitter){particle_destroy(manager,effect,scene);return 0;}box_height(emitter,height);if(tmpl->size==27||tmpl->size==23){tech=particle_technique(effect,1);emitter=tech?technique_emitter(tech,0):0;if(emitter)box_height(emitter,height);}}
     node_attach(node,effect);particle_local(effect,1);set_queue(effect,84);particle_start(effect);particle_bounds(effect,0,0);return effect;
 }
+#include "impact_visual.inl"
 #include "crossbow_visual.inl"
 static float visual_scale(int level,float glow)
 {float scale=level>=100?1.15f:(level>=80?1.1f:(level>=40?1.0f:(level>=20?.9f:.8f)));return glow>0.0f?scale*1.3f:scale;}
@@ -503,7 +512,7 @@ static void update(float dt) {
         }
         particle_update(e->effect,dt);set_aabb(e->effect,bounds);
         if(e->effect2){particle_update(e->effect2,dt);set_aabb(e->effect2,bounds);}
-    }update_hands(manager,dt);cb_update_visuals(manager,dt);for(i=0;i<SB_ALLY_LIMIT;++i)if(allies[i].hit_glow>0.0f){allies[i].hit_glow-=dt;if(allies[i].hit_glow<0.0f)allies[i].hit_glow=0.0f;}} __finally {internal=0;ReleaseSRWLockExclusive(&guard);}
+    }update_hands(manager,dt);impact_update(manager,dt);cb_update_visuals(manager,dt);for(i=0;i<SB_ALLY_LIMIT;++i)if(allies[i].hit_glow>0.0f){allies[i].hit_glow-=dt;if(allies[i].hit_glow<0.0f)allies[i].hit_glow=0.0f;}} __finally {internal=0;ReleaseSRWLockExclusive(&guard);}
 }
 static void gpu_hook(void* world,float dt) {original_gpu(world,dt);if(active)__try {update(dt);} __except(1) {active=0;logline("DISABLED: sword-fire update failed. Restart without probe.\r\n");}}
 static int distinct_hook_targets(void* a,void* b){return a&&b&&a!=b;}
@@ -670,7 +679,16 @@ __declspec(dllexport) void startPlugin(void) {
 int __stdcall DllMain(MODULE module,DWORD reason,void* unused) {(void)unused;if(reason==1)self=module;return 1;}
 #ifdef SPELLBLADE_NATIVE_TEST
 /* Only exported in the isolated engine test build; never in the game package. */
+static void* impact_test_appearance(void* target){return target?(void*)11:0;}
+static void* impact_test_body(void* appearance){return appearance?(void*)12:0;}
+static void* impact_test_parent(void* body){return body?(void*)13:0;}
+static void* impact_test_scene(void* node){return node?(void*)123:0;}
+static void* impact_test_derived(void* node,Vec* out){if(!node)return 0;*out=(Vec){1,2,3};return out;}
+__declspec(dllexport) int probeTestImpactPositions(void){int i;Vec p;void* scene=0;for(i=0;i<SB_IMPACT_LIMIT;++i)impacts[i]=(SBImpact){0};character_appearance=impact_test_appearance;appearance_body=impact_test_body;parent_node=impact_test_parent;node_scene=impact_test_scene;trail_derive=impact_test_derived;particle_manager=0;impact_queue_character((void*)1,4,5);if(impacts[0].scene!=(void*)123||impacts[0].parent!=(void*)13||impacts[0].position.y!=10||impacts[0].element!=4||impacts[0].secondary!=5)return 1;impact_clear_parent((void*)13);if(impacts[0].scene)return 3;cb_flights[0]=(CBFlight){0};cb_flights[0].projectile=(void*)20;cb_flights[0].source=(void*)13;cb_flights[0].frames=1;cb_flights[0].offset=(Vec){10,20,30};if(!crossbow_impact_sample((void*)20,&scene,&p)||scene!=(void*)123||p.x!=11||p.y!=22||p.z!=33)return 2;cb_flights[0]=(CBFlight){0};return 0;}
+__declspec(dllexport) int probeTestImpactQueue(void){Vec p={1,2,3};int i;void* scene=(void*)123;for(i=0;i<SB_IMPACT_LIMIT;++i)impacts[i]=(SBImpact){0};if(impact_queue_position(scene,&p,0,0)||impact_queue_position(0,&p,1,0))return 1;for(i=0;i<SB_IMPACT_LIMIT;++i)if(!impact_queue_position(scene,&p,1,2))return 2;if(impact_queue_position(scene,&p,1,0))return 3;particle_manager=0;impact_clear_scene(scene);for(i=0;i<SB_IMPACT_LIMIT;++i)if(impacts[i].scene)return 4;for(i=1;i<=5;++i)if(!impact_template(i))return 5;return 0;}
+__declspec(dllexport) int probeTestImpactSetting(void){Vec p={1,2,3};int i;for(i=0;i<SB_IMPACT_LIMIT;++i)impacts[i]=(SBImpact){0};particle_manager=0;show_impacts=0;if(impact_queue_position((void*)123,&p,1,0))return 1;show_impacts=1;if(!impact_queue_position((void*)123,&p,1,0))return 2;show_impacts=0;impact_update(0,.016f);if(impacts[0].scene)return 3;show_impacts=1;return 0;}
 __declspec(dllexport) float probeTestMultiplierFromIni(const char* path){unsigned i;if(!path)return -1.0f;for(i=0;i<sizeof(settings_path)-1&&path[i];++i)settings_path[i]=path[i];settings_path[i]=0;reload_settings();return effect_multiplier;}
+__declspec(dllexport) int probeTestImpactSettingFromIni(const char* path){if(!path)return -1;probeTestMultiplierFromIni(path);return show_impacts;}
 __declspec(dllexport) int probeTestEffectMultiplier(void)
 {
     SBAffinity a;SBDamage original={30,10,0,0,1,0},zero,normal,five,half;int i,j;
@@ -701,7 +719,7 @@ __declspec(dllexport) int probeTestMcmRegistration(void)
 {
     MCM_Api api={1,0,test_mcm_begin,test_mcm_section,test_mcm_toggle,0,0,test_mcm_choice};char old=settings_path[0];
     test_mcm_bad=test_mcm_int_seen=test_mcm_toggle_count=0;settings_path[0]='x';MCM_Describe(&api);settings_path[0]=old;
-    return test_mcm_bad||test_mcm_int_seen!=1||test_mcm_toggle_count!=2;
+    return test_mcm_bad||test_mcm_int_seen!=1||test_mcm_toggle_count!=3;
 }
 static Vec* (*test_node_position)(void*,Vec*);
 static float (*test_box_height)(void*);

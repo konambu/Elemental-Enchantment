@@ -1,0 +1,249 @@
+system EE_Impact_Fire
+{
+    category kenshi_particles
+    technique Burst
+    {
+        visual_particle_quota 40
+        material Flame1
+        renderer Billboard
+        {
+        }
+        emitter Box Burst
+        {
+            emission_rate 160
+            duration 0.15
+            repeat_delay 100
+            box_width 3
+            box_height 3
+            box_depth 3
+            direction 0 1 0
+            angle 180
+            time_to_live dyn_random
+            {
+                min 0.35
+                max 0.7
+            }
+            velocity dyn_random
+            {
+                min 4
+                max 9
+            }
+            particle_width dyn_random
+            {
+                min 1.62
+                max 2.7
+            }
+            particle_height dyn_random
+            {
+                min 1.62
+                max 2.7
+            }
+        }
+        affector Colour
+        {
+            time_colour 0 1 0.25 0.03 0
+            time_colour 0.15 1 0.5 0.08 0.85
+            time_colour 1 0.35 0.03 0.01 0
+        }
+    }
+}
+
+system EE_Impact_Lightning
+{
+    category kenshi_particles
+    technique Burst
+    {
+        visual_particle_quota 40
+        material kenshi_lightning
+        renderer Billboard
+        {
+        }
+        emitter Box Burst
+        {
+            emission_rate 160
+            duration 0.15
+            repeat_delay 100
+            box_width 3
+            box_height 3
+            box_depth 3
+            direction 0 1 0
+            angle 180
+            time_to_live dyn_random
+            {
+                min 0.35
+                max 0.7
+            }
+            velocity dyn_random
+            {
+                min 6
+                max 12
+            }
+            particle_width dyn_random
+            {
+                min 1.8
+                max 4.32
+            }
+            particle_height dyn_random
+            {
+                min 1.8
+                max 4.32
+            }
+        }
+        affector Colour
+        {
+            time_colour 0 0.75 0.9 1 0
+            time_colour 0.15 0.85 0.95 1 0.85
+            time_colour 1 0.2 0.45 1 0
+        }
+    }
+}
+
+system EE_Impact_Wind
+{
+    category kenshi_particles
+    technique Burst
+    {
+        visual_particle_quota 40
+        material SB_WindWisp
+        renderer Billboard
+        {
+        }
+        emitter Box Burst
+        {
+            emission_rate 160
+            duration 0.15
+            repeat_delay 100
+            box_width 3
+            box_height 3
+            box_depth 3
+            direction 0 1 0
+            angle 180
+            time_to_live dyn_random
+            {
+                min 0.35
+                max 0.7
+            }
+            velocity dyn_random
+            {
+                min 4
+                max 7
+            }
+            particle_width dyn_random
+            {
+                min 3.06
+                max 5.04
+            }
+            particle_height dyn_random
+            {
+                min 3.06
+                max 5.04
+            }
+        }
+        affector Colour
+        {
+            time_colour 0 0.65 1 0.7 0
+            time_colour 0.15 0.7 1 0.75 0.85
+            time_colour 1 0.4 0.8 0.55 0
+        }
+    }
+}
+
+system EE_Impact_Water
+{
+    category kenshi_particles
+    technique Burst
+    {
+        visual_particle_quota 40
+        material Footsplash[A]
+        renderer Billboard
+        {
+        }
+        emitter Box Burst
+        {
+            emission_rate 160
+            duration 0.15
+            repeat_delay 100
+            box_width 3
+            box_height 3
+            box_depth 3
+            direction 0 1 0
+            angle 180
+            time_to_live dyn_random
+            {
+                min 0.35
+                max 0.7
+            }
+            velocity dyn_random
+            {
+                min 5
+                max 10
+            }
+            particle_width dyn_random
+            {
+                min 1.62
+                max 3.06
+            }
+            particle_height dyn_random
+            {
+                min 1.62
+                max 3.06
+            }
+        }
+        affector Colour
+        {
+            time_colour 0 0.5 0.8 1 0
+            time_colour 0.15 0.7 0.9 1 0.85
+            time_colour 1 0.3 0.6 0.9 0
+        }
+    }
+}
+
+system EE_Impact_Ice
+{
+    category kenshi_particles
+    technique Burst
+    {
+        visual_particle_quota 40
+        material SB_ColdMist
+        renderer Billboard
+        {
+        }
+        emitter Box Burst
+        {
+            emission_rate 160
+            duration 0.15
+            repeat_delay 100
+            box_width 3
+            box_height 3
+            box_depth 3
+            direction 0 1 0
+            angle 180
+            time_to_live dyn_random
+            {
+                min 0.35
+                max 0.7
+            }
+            velocity dyn_random
+            {
+                min 3
+                max 6
+            }
+            particle_width dyn_random
+            {
+                min 3.06
+                max 4.86
+            }
+            particle_height dyn_random
+            {
+                min 3.06
+                max 4.86
+            }
+        }
+        affector Colour
+        {
+            time_colour 0 0.7 0.88 1 0
+            time_colour 0.15 0.8 0.95 1 0.85
+            time_colour 1 0.45 0.7 1 0
+        }
+    }
+}
