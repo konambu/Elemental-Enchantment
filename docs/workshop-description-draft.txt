@@ -1,8 +1,11 @@
 [h1]Elemental Enchantment[/h1]
 
-Enchant melee weapons, fists and crossbows with elemental power. Choose a main element for each character, develop their aptitude, and eventually combine two elements.
+Enchant melee weapons, fists and crossbows with elemental power.
+Choose a main element for each character, raise their Elemental level, and eventually combine two elements.
 
-[b]Crossbow beta:[/b] Elemental loading and bolt effects are available. Combat effects remain experimental; please report issues.
+[b]Crossbow beta:[/b] Elemental effects appear while loading and on flying bolts.
+Elements can also affect combat and reload speed.
+Please report any issues.
 
 [h2]Elements[/h2]
 Melee bonuses grow with the shared Elemental level. The numbers below are for a main element at level 0–100; secondary bonuses are scaled by the secondary element's strength.
@@ -15,11 +18,16 @@ Melee bonuses grow with the shared Elemental level. The numbers below are for a 
 [/list]
 
 [h2]Aptitude and experience[/h2]
-Each character receives a randomly determined aptitude. Their strongest element gains Elemental experience at 100%; the two neighbouring elements gain 80%; the other two gain 60%. Rare characters have equal aptitude in all elements. Aptitude affects experience gain, not maximum level or bonuses.
+Each character receives a randomly determined aptitude.
+Their strongest element gains Elemental experience at 100%; the two neighbouring elements gain 80%; the other two gain 60%.
+Rare characters have equal aptitude in all elements.
+Aptitude affects experience gain, not maximum level or bonuses.
 
-All elements share one Elemental level, up to 100. Successful melee or crossbow hits can earn experience while an element is active. Open the character's stats and select ENCHANTMENT to choose elements and view aptitude, experience and bonuses.
+All elements share one Elemental level, up to 100. Successful melee or crossbow hits can earn experience while an element is active.
+Open the character's stats and select ENCHANTMENT to choose elements and view aptitude, experience and bonuses.
 
-[b]Optional Mod Config Menu setting:[/b] In Options > MCM > Elemental Enchantment, enable [b]All elemental aptitudes 100%[/b] to remove experience penalties for all player characters. It is off by default. Disabling it restores each character's original aptitude. Mod Config Menu is optional.
+[b]Optional Mod Config Menu setting:[/b] In Options > MCM > Elemental Enchantment, enable [b]All elemental aptitudes 100%[/b] to remove experience penalties for all player characters. It is off by default.
+Disabling it restores each character's original aptitude. Mod Config Menu is optional.
 
 [h2]Progression[/h2]
 [list]
@@ -31,15 +39,21 @@ All elements share one Elemental level, up to 100. Successful melee or crossbow 
 [/list]
 
 [h2]Requirements and compatibility[/h2]
-Requires [url=https://github.com/BFrizzleFoShizzle/RE_Kenshi]RE_Kenshi[/url]. Tested on Kenshi 1.0.65 with RE_Kenshi 0.3.5; other builds have not been verified. Players and selected bosses can use enchantments; boss combat effects are experimental. For Nitoryu, load Elemental Enchantment above Nitoryu.
+Requires [url=https://github.com/BFrizzleFoShizzle/RE_Kenshi]RE_Kenshi[/url].
+Tested on Kenshi 1.0.65 with RE_Kenshi 0.3.5; other builds have not been verified.
+Players and selected bosses can use enchantments; boss combat effects are experimental.
+For Nitoryu, load Elemental Enchantment above Nitoryu.
 
 This is an initial beta. Please report any problems you encounter!
 
 [h1]日本語[/h1]
 
-近接武器、素手、クロスボウに属性の力をまとわせるModです。キャラクターごとに主属性を選び、成長すると２つ目の属性も組み合わせられます。
+近接武器、素手、クロスボウに属性の力をまとわせるModです。
+キャラクターごとに主属性を選び、成長すると２つ目の属性も組み合わせられます。
 
-[b]クロスボウ対応はベータ版です。[/b] 装填中と飛翔中のボルトに属性エフェクトが表示されます。ダメージ・防具貫通・出血・弾速・経験値などの戦闘効果は検証中で、正しく動かない場合があります。不具合があれば教えてください。
+[b]クロスボウ対応はベータ版です。[/b]
+装填中と飛翔中のボルトに属性エフェクトが付き、属性に応じて戦闘効果や装填速度も変化します。
+不具合があれば教えてください。
 
 [h2]属性ごとの効果[/h2]
 以下は近接攻撃で主属性を使った場合のElementalレベル0〜100の数値です。副属性の効果は、その時点の副属性の強さに応じて小さくなります。
@@ -52,11 +66,17 @@ This is an initial beta. Please report any problems you encounter!
 [/list]
 
 [h2]適性と経験値[/h2]
-各キャラクターにはランダムで得意属性が設定されます。得意属性の経験値は100%、その両隣は80%、残り２属性は60%。まれに全属性が得意なキャラクターもいます。適性は経験値の入りやすさに影響し、最終レベルや効果の上限は変わりません。
+各キャラクターにはランダムで得意属性が設定されます。
+得意属性の経験値は100%、その両隣は80%、残り２属性は60%。
+まれに全属性が得意なキャラクターもいます。
+適性は経験値の入りやすさに影響し、最終レベルや効果の上限は変わりません。
 
-レベルは全属性で共通、上限は100です。属性を有効にして近接攻撃やクロスボウを当てると経験値が入ります。キャラクターの能力画面にあるENCHANTMENTから、属性の選択や適性・経験値・効果を確認できます。
+レベルは全属性で共通、上限は100です。属性を有効にして近接攻撃やクロスボウを当てると経験値が入ります。
+キャラクターの能力画面にあるENCHANTMENTから、属性の選択や適性・経験値・効果を確認できます。
 
-[b]Mod Config Menuの任意設定：[/b] 設定 → MCM → Elemental Enchantmentで「All elemental aptitudes 100%」をオンにすると、全キャラクターの全属性の経験値が100%になります。初期設定はオフです。オフに戻すと元の適性が適用されます。Mod Config Menuは必須ではありません。
+[b]Mod Config Menuの任意設定：[/b] 設定 → MCM → Elemental Enchantmentで「All elemental aptitudes 100%」をオンにすると、全キャラクターの全属性の経験値が100%になります。
+初期設定はオフです。オフに戻すと元の適性が適用されます。
+Mod Config Menuは必須ではありません。
 
 [h2]レベルごとの解放[/h2]
 [list]
@@ -83,20 +103,31 @@ This is an initial beta. Please report any problems you encounter!
 
 
 [h2]한국어[/h2]
-근접 무기와 맨손에 불·번개·바람·물·얼음 속성을 부여합니다. 캐릭터마다 무작위 적성이 있으며, 레벨 50에 보조 속성이 해금됩니다. 속성을 켜고 근접 공격을 맞히면 경험치를 얻습니다.
+근접 무기와 맨손에 불·번개·바람·물·얼음 속성을 부여합니다.
+캐릭터마다 무작위 적성이 있으며, 레벨 50에 보조 속성이 해금됩니다.
+속성을 켜고 근접 공격을 맞히면 경험치를 얻습니다.
 
-캐릭터 능력창 왼쪽의 ENCHANTMENT 버튼에서 속성과 적성, 경험치, 효과를 확인하세요. RE_Kenshi가 필요합니다.
+캐릭터 능력창 왼쪽의 ENCHANTMENT 버튼에서 속성과 적성, 경험치, 효과를 확인하세요.
+RE_Kenshi가 필요합니다.
 
 MCM(선택)에서 All elemental aptitudes 100%를 켜면 경험치 감소가 없어집니다.
 
 [h2]Русский[/h2]
-Накладывайте стихийные чары на оружие ближнего боя и кулаки: огонь, молния, ветер, вода и лёд. У каждого персонажа есть своя предрасположенность; на 50-м уровне открывается вторая стихия. Выбор стихии: откройте характеристики персонажа и нажмите ENCHANTMENT. Требуется RE_Kenshi.
+Накладывайте стихийные чары на оружие ближнего боя и кулаки: огонь, молния, ветер, вода и лёд. У каждого персонажа есть своя предрасположенность; на 50-м уровне открывается вторая стихия.
+Выбор стихии: откройте характеристики персонажа и нажмите ENCHANTMENT.
+Требуется RE_Kenshi.
 
 [h2]简体中文[/h2]
-为近战武器和徒手攻击附加火、雷、风、水、冰五种元素效果。每个角色都有自己的元素天赋，元素等级达到50级后可解锁第二种元素。打开角色属性界面并点击 ENCHANTMENT 即可选择元素。需要 RE_Kenshi。
+为近战武器和徒手攻击附加火、雷、风、水、冰五种元素效果。每个角色都有自己的元素天赋，元素等级达到50级后可解锁第二种元素。
+打开角色属性界面并点击 ENCHANTMENT 即可选择元素。
+需要 RE_Kenshi。
 
 [h2]Español[/h2]
-Encanta tus armas cuerpo a cuerpo y puños con fuego, rayo, viento, agua o hielo. Cada personaje tiene su propia afinidad y desbloquea un segundo elemento al alcanzar el nivel 50. Abre las estadísticas del personaje y pulsa ENCHANTMENT para elegir un elemento. Requiere RE_Kenshi.
+Encanta tus armas cuerpo a cuerpo y puños con fuego, rayo, viento, agua o hielo. Cada personaje tiene su propia afinidad y desbloquea un segundo elemento al alcanzar el nivel 50.
+Abre las estadísticas del personaje y pulsa ENCHANTMENT para elegir un elemento.
+Requiere RE_Kenshi.
 
 [h2]Português (Brasil)[/h2]
-Encante armas corpo a corpo e punhos com fogo, raio, vento, água ou gelo. Cada personagem possui sua própria afinidade e desbloqueia um segundo elemento no nível 50. Abra os atributos do personagem e selecione ENCHANTMENT para escolher o elemento. Requer RE_Kenshi.
+Encante armas corpo a corpo e punhos com fogo, raio, vento, água ou gelo. Cada personagem possui sua própria afinidade e desbloqueia um segundo elemento no nível 50.
+Abra os atributos do personagem e selecione ENCHANTMENT para escolher o elemento.
+Requer RE_Kenshi.
