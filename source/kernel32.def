@@ -12,3 +12,4 @@ GetTickCount64
 AcquireSRWLockExclusive
 ReleaseSRWLockExclusive
 GetPrivateProfileIntA
+GetPrivateProfileStringA

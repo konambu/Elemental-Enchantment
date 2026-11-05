@@ -53,6 +53,24 @@ int sb_affinity_damage(const SBAffinity* s,SBDamage* d)
     return 1;
 }
 
+int sb_affinity_damage_scaled(const SBAffinity* s,SBDamage* d,float multiplier)
+{
+    SBDamage original;float m;
+    if(!d||!(multiplier>0.0f))return 0;if(multiplier>5.0f)multiplier=5.0f;
+    original=*d;if(!sb_affinity_damage(s,d))return 0;m=multiplier;
+    d->cut=original.cut+(d->cut-original.cut)*m;
+    d->blunt=original.blunt+(d->blunt-original.blunt)*m;
+    d->pierce=original.pierce+(d->pierce-original.pierce)*m;
+    d->stun=original.stun+(d->stun-original.stun)*m;
+    d->bleed=original.bleed+(d->bleed-original.bleed)*m;
+    d->armour=original.armour+(d->armour-original.armour)*m;
+    return 1;
+}
+float sb_affinity_combat_speed_scaled(const SBAffinity* s,float speed,float multiplier)
+{if(!(multiplier>0.0f))multiplier=0.0f;if(multiplier>5.0f)multiplier=5.0f;return speed+(sb_affinity_combat_speed(s,speed)-speed)*multiplier;}
+float sb_affinity_attack_speed_scaled(const SBAffinity* s,float speed,float multiplier)
+{if(!(multiplier>0.0f))multiplier=0.0f;if(multiplier>5.0f)multiplier=5.0f;return speed+(sb_affinity_attack_speed(s,speed)-speed)*multiplier;}
+
 int sb_affinity_encode(const SBAffinity* s,int out[3])
 {
     unsigned int code=5;int i,j,all=1;

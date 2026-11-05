@@ -14,6 +14,7 @@ typedef struct { float w,x,y,z; } Quat;
 #ifdef SB_ENABLE_UI
 #include "spellblade_mygui.h"
 #include "spellblade_localization.h"
+#include "spellblade_mcm_strings.h"
 #endif
 typedef struct { void* owner; void* blade; void* tag; void* scene; void* parent; void* node; void* effect; void* effect2; U64 born; float length;float applied_scale; int pole; int element;int secondary;int level;
 #ifdef SB_ENABLE_TRAIL
@@ -24,6 +25,7 @@ __declspec(dllimport) MODULE __stdcall GetModuleHandleA(const char*);
 __declspec(dllimport) void* __stdcall GetProcAddress(MODULE,const char*);
 __declspec(dllimport) DWORD __stdcall GetModuleFileNameA(MODULE,char*,DWORD);
 __declspec(dllimport) unsigned int __stdcall GetPrivateProfileIntA(const char*,const char*,int,const char*);
+__declspec(dllimport) DWORD __stdcall GetPrivateProfileStringA(const char*,const char*,const char*,char*,DWORD,const char*);
 __declspec(dllimport) DWORD __stdcall GetCurrentThreadId(void);
 __declspec(dllimport) U64 __stdcall GetTickCount64(void);
 __declspec(dllimport) void __stdcall AcquireSRWLockExclusive(void*);
@@ -46,7 +48,7 @@ typedef struct {void* character;void* body;void* bone;void* scene;void* parent;v
 static HandFire hand_fires[SB_ALLY_LIMIT*2];
 static void* guard; static DWORD internal; static int active,logged_full; static U64 serial;
 static char log_path[1024]; static MODULE self;
-static char settings_path[1024]; static int all_aptitudes;
+static char settings_path[1024]; static int all_aptitudes; static float effect_multiplier=1.0f; static int show_trails=1;
 #ifdef SB_ENABLE_UI
 static void select_game_locale(void);
 #endif
@@ -56,11 +58,22 @@ struct MCM_Api {
     void (__cdecl *beginMod)(MCM_Api*,const char*,const char*,const char*,void (__cdecl *)(void));
     void (__cdecl *section)(MCM_Api*,const char*);
     void (__cdecl *toggle)(MCM_Api*,const char*,const char*,const char*,const char*,int,unsigned);
+    void (__cdecl *integer)(MCM_Api*,const char*,const char*,const char*,const char*,int,int,int,unsigned);
+    void (__cdecl *number)(MCM_Api*,const char*,const char*,const char*,const char*,float,float,float,int,unsigned);
+    void (__cdecl *choice)(MCM_Api*,const char*,const char*,const char*,const char*,const char*,const char* const*,const char* const*,int,unsigned);
 };
+static float parse_effect_multiplier(const char* s){int whole;if(!s||s[0]<'0'||s[0]>'5')return 1.0f;whole=s[0]-'0';if(!s[1])return (float)whole;if(s[1]!='.'||!s[2]||s[3])return 1.0f;if(s[2]=='0')return (float)whole;if(s[2]=='5'&&whole<5)return (float)whole+0.5f;return 1.0f;}
 static void __cdecl reload_settings(void) {
+    char m[16];if(settings_path[0])GetPrivateProfileStringA("General","EffectMultiplier","1",m,sizeof(m),settings_path);else{m[0]='1';m[1]=0;}
     all_aptitudes=settings_path[0] && GetPrivateProfileIntA("General","AllAptitudes100",0,settings_path)!=0;
+    effect_multiplier=parse_effect_multiplier(m);
+    show_trails=!settings_path[0]||GetPrivateProfileIntA("General","ShowWeaponTrails",1,settings_path)!=0;
+#ifdef SB_ENABLE_UI
+    sb_ui_view_set_effect_multiplier(effect_multiplier);
+#endif
 }
 __declspec(dllexport) void __cdecl MCM_Describe(MCM_Api* api) {
+    static const char* const strength_values[]={"0","0.5","1","1.5","2","2.5","3","3.5","4","4.5","5"};
     if(!api || api->version<1 || !api->beginMod || !api->section || !api->toggle || !settings_path[0])return;
 #ifdef SB_ENABLE_UI
     select_game_locale();
@@ -69,9 +82,15 @@ __declspec(dllexport) void __cdecl MCM_Describe(MCM_Api* api) {
 #ifdef SB_ENABLE_UI
     api->section(api,sb_locale_get()->mcm_section);
     api->toggle(api,"General","AllAptitudes100",sb_locale_get()->mcm_label,sb_locale_get()->mcm_tip,0,0);
+    {const SBMcmText* t=sb_mcm_text(sb_locale_get()->id);api->section(api,t->section);
+     if(api->choice)api->choice(api,"General","EffectMultiplier",t->strength,t->strength_tip,"1",strength_values,0,11,0);
+     api->toggle(api,"General","ShowWeaponTrails",t->trails,t->trails_tip,1,0);}
 #else
     api->section(api,"Aptitude");
     api->toggle(api,"General","AllAptitudes100","All elemental aptitudes 100%","All characters gain elemental experience at 100% speed.",0,0);
+    api->section(api,"Effects");
+    if(api->choice)api->choice(api,"General","EffectMultiplier","Effect strength (x)","0: visuals only; 1: normal; 5: five times.","1",strength_values,0,11,0);
+    api->toggle(api,"General","ShowWeaponTrails","Weapon trails","Show weapon trails while attacking.",1,0);
 #endif
 }
 
@@ -293,7 +312,7 @@ static float element_speed(void* stats,float base,int attacking)
     float result=base;if(!active||!stats||internal==GetCurrentThreadId())return base;
     __try {void* character=*(void**)((unsigned char*)stats+0x10);
         if(character&&melee_context(character)){SBAffinity a;AcquireSRWLockExclusive(&guard);
-            __try {if(combat_affinity_locked(character,stats,&a))result=attacking?sb_affinity_attack_speed(&a,base):sb_affinity_combat_speed(&a,base);}
+            __try {if(combat_affinity_locked(character,stats,&a))result=attacking?sb_affinity_attack_speed_scaled(&a,base,effect_multiplier):sb_affinity_combat_speed_scaled(&a,base,effect_multiplier);}
             __finally {ReleaseSRWLockExclusive(&guard);}
         }
     } __except(1) {logline("WIND: speed bonus skipped after native error.\r\n");}
@@ -309,7 +328,7 @@ static int character_hit_hook(void* target,int direction,void* damage,void* atta
     int result,has_bonus=0;SBDamage original,modified,bonus;
     if(active&&damage&&attacker&&target&&attacker!=target&&internal!=GetCurrentThreadId())__try {
         if(melee_context(attacker)){void* stats=character_stats(attacker);SBAffinity a;AcquireSRWLockExclusive(&guard);
-            __try {if(combat_affinity_locked(attacker,stats,&a)){original=*(SBDamage*)damage;modified=original;has_bonus=sb_affinity_damage(&a,&modified);}}
+            __try {if(combat_affinity_locked(attacker,stats,&a)){original=*(SBDamage*)damage;modified=original;has_bonus=sb_affinity_damage_scaled(&a,&modified,effect_multiplier);}}
             __finally {ReleaseSRWLockExclusive(&guard);}
         }
     } __except(1) {has_bonus=0;logline("EFFECT: hit bonus skipped after native error.\r\n");}
@@ -334,7 +353,7 @@ static void* crossbow_wound_hook(void* medical,unsigned char low,int direction,v
         {int player=character_is_player(attacker);const unsigned char* h=player?(const unsigned char*)character_handle(attacker):0;void* character_stat=character_stats(attacker);SBAffinity a;
             if(player&&character_stat&&h){stats=character_stat;index=*(const unsigned int*)(h+0x14);serial_number=*(const unsigned int*)(h+0x18);}
             AcquireSRWLockExclusive(&guard);
-            __try {if(combat_affinity_locked(attacker,character_stat,&a)){float pierce;original=*(SBDamage*)damage;modified=original;pierce=modified.pierce>0.0f?modified.pierce:0.0f;modified.cut+=pierce;applied=sb_affinity_damage(&a,&modified);modified.cut-=pierce;}}
+            __try {if(combat_affinity_locked(attacker,character_stat,&a)){float pierce;original=*(SBDamage*)damage;modified=original;pierce=modified.pierce>0.0f?modified.pierce:0.0f;modified.cut+=pierce;applied=sb_affinity_damage_scaled(&a,&modified,effect_multiplier);modified.cut-=pierce;}}
             __finally {ReleaseSRWLockExclusive(&guard);}
         }
     } __except(1){applied=0;stats=0;logline("CROSSBOW: damage skipped after error.\r\n");}
@@ -479,7 +498,7 @@ static void update(float dt) {
         {float scale=visual_scale(e->level,ally->hit_glow);if(scale!=e->applied_scale){Vec size={scale,scale,scale};node_scale(e->node,&size);e->applied_scale=scale;}}
         p=tag_position(e->tag);q=tag_rotation(e->tag);if(p && q){float start=e->length*(e->pole?.45f:.12f),end=e->length*.98f,off=(start+end)*.5f-5.0f;Vec adjusted={p->x+2*(q->x*q->y-q->w*q->z)*off,p->y+(1-2*(q->x*q->x+q->z*q->z))*off,p->z+2*(q->y*q->z+q->w*q->x)*off};node_position(e->node,&adjusted);node_rotation(e->node,q->w,q->x,q->y,q->z);
 #ifdef SB_ENABLE_TRAIL
-            if(e->level>=20&&ally->attacking)trail_tick(e,p,q,dt);else trail_finish(e,dt);
+            if(show_trails&&e->level>=20&&ally->attacking)trail_tick(e,p,q,dt);else trail_finish(e,dt);
 #endif
         }
         particle_update(e->effect,dt);set_aabb(e->effect,bounds);
@@ -651,6 +670,39 @@ __declspec(dllexport) void startPlugin(void) {
 int __stdcall DllMain(MODULE module,DWORD reason,void* unused) {(void)unused;if(reason==1)self=module;return 1;}
 #ifdef SPELLBLADE_NATIVE_TEST
 /* Only exported in the isolated engine test build; never in the game package. */
+__declspec(dllexport) float probeTestMultiplierFromIni(const char* path){unsigned i;if(!path)return -1.0f;for(i=0;i<sizeof(settings_path)-1&&path[i];++i)settings_path[i]=path[i];settings_path[i]=0;reload_settings();return effect_multiplier;}
+__declspec(dllexport) int probeTestEffectMultiplier(void)
+{
+    SBAffinity a;SBDamage original={30,10,0,0,1,0},zero,normal,five,half;int i,j;
+    for(i=1;i<=5;++i){
+        if(!sb_affinity_create(&a,42,(unsigned int)i))return 1;a.xp[0]=47600;
+        zero=normal=five=original;
+        if(sb_affinity_damage_scaled(&a,&zero,0))return 2;
+        if(sb_affinity_damage(&a,&normal)!=sb_affinity_damage_scaled(&a,&five,5))return 3;
+        half=original;sb_affinity_damage_scaled(&a,&half,0.5f);
+        {float* o=(float*)&original;float* z=(float*)&zero;float* n=(float*)&normal;float* f=(float*)&five;
+         for(j=0;j<6;++j){float diff=f[j]-(o[j]+5.0f*(n[j]-o[j]));float hd=((float*)&half)[j]-(o[j]+0.5f*(n[j]-o[j]));if(z[j]!=o[j]||diff<-.001f||diff>.001f||hd<-.001f||hd>.001f)return 4;}}
+        {float n=sb_affinity_attack_speed(&a,1),f=sb_affinity_attack_speed_scaled(&a,1,5),expected=1+5*(n-1);if(sb_affinity_attack_speed_scaled(&a,1,0)!=1||f<expected-.001f||f>expected+.001f)return 5;
+         n=sb_affinity_combat_speed(&a,1);f=sb_affinity_combat_speed_scaled(&a,1,5);expected=1+5*(n-1);if(sb_affinity_combat_speed_scaled(&a,1,0)!=1||f<expected-.001f||f>expected+.001f)return 6;}
+    }
+    sb_affinity_create(&a,42,3);a.xp[0]=47600;if(!sb_affinity_select_secondary(&a,2))return 7;
+    if(sb_affinity_attack_speed_scaled(&a,1,5)<1.687f||sb_affinity_attack_speed_scaled(&a,1,5)>1.688f)return 8;
+    if(sb_affinity_attack_speed_scaled(&a,1,0.5f)<1.068f||sb_affinity_attack_speed_scaled(&a,1,0.5f)>1.069f)return 10;
+    a.xp[0]=0;if(!sb_affinity_award_hit(&a)||!a.xp[0])return 9;
+    if(parse_effect_multiplier("0.5")!=0.5f||parse_effect_multiplier("1")!=1.0f||parse_effect_multiplier("1.5")!=1.5f||parse_effect_multiplier("5")!=5.0f||parse_effect_multiplier("5.5")!=1.0f)return 11;
+    return 0;
+}
+static int test_mcm_int_seen,test_mcm_toggle_count,test_mcm_bad;
+static void __cdecl test_mcm_begin(MCM_Api* a,const char* id,const char* title,const char* path,void (__cdecl *apply)(void)){(void)a;if(!id||!title||!path||!apply)test_mcm_bad=1;}
+static void __cdecl test_mcm_section(MCM_Api* a,const char* title){(void)a;if(!title||!*title)test_mcm_bad=1;}
+static void __cdecl test_mcm_toggle(MCM_Api* a,const char* section,const char* key,const char* label,const char* tip,int def,unsigned flags){(void)a;(void)section;(void)key;(void)flags;if(!label||!*label||!tip||!*tip||def!=(test_mcm_toggle_count?1:0))test_mcm_bad=1;++test_mcm_toggle_count;}
+static void __cdecl test_mcm_choice(MCM_Api* a,const char* section,const char* key,const char* label,const char* tip,const char* def,const char* const* values,const char* const* labels,int count,unsigned flags){int i;(void)a;(void)section;(void)key;(void)labels;(void)flags;if(!label||!*label||!tip||!*tip||!def||def[0]!='1'||def[1]||!values||count!=11)test_mcm_bad=1;else for(i=0;i<count;++i)if(parse_effect_multiplier(values[i])!=(float)i*0.5f)test_mcm_bad=1;++test_mcm_int_seen;}
+__declspec(dllexport) int probeTestMcmRegistration(void)
+{
+    MCM_Api api={1,0,test_mcm_begin,test_mcm_section,test_mcm_toggle,0,0,test_mcm_choice};char old=settings_path[0];
+    test_mcm_bad=test_mcm_int_seen=test_mcm_toggle_count=0;settings_path[0]='x';MCM_Describe(&api);settings_path[0]=old;
+    return test_mcm_bad||test_mcm_int_seen!=1||test_mcm_toggle_count!=2;
+}
 static Vec* (*test_node_position)(void*,Vec*);
 static float (*test_box_height)(void*);
 static int test_free_calls;
@@ -714,6 +766,20 @@ __declspec(dllexport) int probeTestHitXP(void)
 __declspec(dllexport) int probeTestHookTargets(void) {return !distinct_hook_targets((void*)1,(void*)2)||distinct_hook_targets((void*)1,(void*)1)||distinct_hook_targets(0,(void*)1);}
 static float test_wound_seen_cut,test_wound_seen_blunt,test_wound_seen_pierce;
 static void* test_crossbow_wound_original(void* a,unsigned char b,int c,void* damage,int* d,void* e,int* f,void* g){SBDamage* x=(SBDamage*)damage;(void)a;(void)b;(void)c;(void)d;(void)e;(void)f;(void)g;test_wound_seen_cut=x->cut;test_wound_seen_blunt=x->blunt;test_wound_seen_pierce=x->pierce;return (void*)1;}
+__declspec(dllexport) int probeTestMultiplierHitHooks(void){
+    SBCharacterRecord* r;SBDamage d={30,10,0,0,1,0};float one,five;int fail=0;
+    sb_persistence_init(&persistence);character_is_player=test_is_player;character_handle=test_handle;character_stats=test_hit_stats;original_character_hit=test_hit_original;original_crossbow_wound=test_crossbow_wound_original;test_melee_api();
+    test_handle_values[5]=42;test_handle_values[6]=7;test_player_flag=1;test_hit_result=2;active=1;
+    r=sb_persistence_bind(&persistence,(void*)123,(void*)9,42,7,99,4);if(!r)return 1;r->affinity.xp[0]=47600;
+    effect_multiplier=0;character_hit_hook((void*)8,0,&d,(void*)9,0,0);if(test_seen_cut!=30)fail=2;
+    effect_multiplier=1;character_hit_hook((void*)8,0,&d,(void*)9,0,0);one=test_seen_cut;
+    effect_multiplier=5;character_hit_hook((void*)8,0,&d,(void*)9,0,0);five=test_seen_cut;if(one<35.99f||one>36.01f||five<59.99f||five>60.01f)fail=3;
+    sb_affinity_select(&r->affinity,1);d=(SBDamage){0,0,100,0,1,0};
+    effect_multiplier=0;crossbow_wound_hook((void*)8,0,0,&d,0,(void*)9,0,(void*)7);if(test_wound_seen_blunt!=0)fail=4;
+    effect_multiplier=1;crossbow_wound_hook((void*)8,0,0,&d,0,(void*)9,0,(void*)7);one=test_wound_seen_blunt;
+    effect_multiplier=5;crossbow_wound_hook((void*)8,0,0,&d,0,(void*)9,0,(void*)7);five=test_wound_seen_blunt;if(one<14.99f||one>15.01f||five<74.99f||five>75.01f)fail=5;
+    effect_multiplier=1;active=0;return fail;
+}
 __declspec(dllexport) int probeTestCrossbowWound(void){
     SBCharacterRecord* r;SBDamage d={0,0,100,0,1,0};unsigned int old;
     sb_persistence_init(&persistence);character_is_player=test_is_player;character_handle=test_handle;character_stats=test_hit_stats;original_crossbow_wound=test_crossbow_wound_original;test_handle_values[5]=42;test_handle_values[6]=7;test_player_flag=1;active=1;all_aptitudes=1;

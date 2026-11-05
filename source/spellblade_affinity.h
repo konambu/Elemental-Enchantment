@@ -25,6 +25,9 @@ typedef struct SBDamage {float cut,blunt,pierce,stun,bleed,armour;} SBDamage;
 int sb_affinity_damage(const SBAffinity*,SBDamage*);
 float sb_affinity_combat_speed(const SBAffinity*,float base_speed);
 float sb_affinity_attack_speed(const SBAffinity*,float base_speed);
+int sb_affinity_damage_scaled(const SBAffinity*,SBDamage*,float multiplier);
+float sb_affinity_combat_speed_scaled(const SBAffinity*,float base_speed,float multiplier);
+float sb_affinity_attack_speed_scaled(const SBAffinity*,float base_speed,float multiplier);
 int sb_affinity_encode(const SBAffinity*, int out_three[3]);
 /* A corrupt or unknown-version record must not overwrite a current state. */
 int sb_affinity_decode(SBAffinity*, const int in_three[3]);

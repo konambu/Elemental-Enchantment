@@ -1,0 +1,11 @@
+{
+  "en_GB": ["Effects", "Effect strength (x)", "0: visuals only; 1: normal; 5: five times. Applies to allies and bosses.", "Weapon trails", "Show weapon trails while attacking."],
+  "ja_JP": ["エフェクト・効果", "属性効果の倍率", "0は見た目のみ、1は通常、5は5倍。仲間とボスに適用。", "武器の軌跡", "攻撃時の武器の軌跡を表示します。"],
+  "ko_KR": ["효과", "속성 효과 배율", "0: 외형만, 1: 기본, 5: 5배. 아군과 보스에게 적용됩니다.", "무기 궤적", "공격할 때 무기 궤적을 표시합니다."],
+  "zh_CN": ["效果", "元素效果倍率", "0：仅外观；1：正常；5：五倍。适用于队友和首领。", "武器轨迹", "攻击时显示武器轨迹。"],
+  "es_ES": ["Efectos", "Multiplicador de efectos", "0: solo visual; 1: normal; 5: quíntuple. Se aplica a aliados y jefes.", "Estelas de armas", "Muestra estelas al atacar."],
+  "pt_BR": ["Efeitos", "Multiplicador de efeitos", "0: apenas visual; 1: normal; 5: cinco vezes. Aplica-se a aliados e chefes.", "Rastros das armas", "Mostra rastros ao atacar."],
+  "de_DE": ["Effekte", "Effektstärke (x)", "0: nur Optik; 1: normal; 5: fünffach. Gilt für Verbündete und Bosse.", "Waffenspuren", "Zeigt Waffenspuren beim Angriff."],
+  "ru_RU": ["Эффекты", "Множитель эффектов", "0: только визуально; 1: обычно; 5: впятеро. Для союзников и боссов.", "Следы оружия", "Показывать следы оружия при атаке."],
+  "fr_FR": ["Effets", "Multiplicateur des effets", "0 : visuel seulement ; 1 : normal ; 5 : cinq fois. Pour les alliés et les boss.", "Traînées des armes", "Afficher les traînées pendant les attaques."]
+}

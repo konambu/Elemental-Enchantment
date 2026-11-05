@@ -18,6 +18,7 @@ typedef struct SBUIView {
     void* labels[5];void* axis_labels[5];void* buttons[6];void* mode_main;void* mode_second;void* milestone;void* xp_label;void* xp_percent;int second_mode;int graph_ready;SBAffinity graph_state;
 } SBUIView;
 void sb_ui_view_init(SBUIView*);
+void sb_ui_view_set_effect_multiplier(float multiplier);
 int sb_ui_view_build(SBUIView*,const SBUIViewAPI*,void* parent,int width,int height);
 void sb_ui_view_dispose(SBUIView*,const SBUIViewAPI*);
 void sb_ui_view_sync(SBUIView*,const SBUIViewAPI*,void* window,void* character,unsigned int index,unsigned int serial,const SBAffinity*,int editable);

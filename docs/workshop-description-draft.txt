@@ -8,7 +8,7 @@ Elements can also affect combat and reload speed.
 Please report any issues.
 
 [h2]Elements[/h2]
-Bonuses grow with the shared Elemental level. The numbers below are for a main element at level 0–100; secondary bonuses are scaled by the secondary element's strength.
+Main element bonuses at level 0–100, with default 1x strength:
 [list]
 [*][b]Fire[/b]: Adds blunt damage equal to 5–15% of the attack's base cut and blunt damage.
 [*][b]Lightning[/b]: Adds 5–15% armour penetration and increases attack speed by 1–5%.
@@ -18,21 +18,24 @@ Bonuses grow with the shared Elemental level. The numbers below are for a main e
 [/list]
 
 [h2]Aptitude and experience[/h2]
-Each character receives a randomly determined aptitude.
-Their strongest element gains Elemental experience at 100%; the two neighbouring elements gain 80%; the other two gain 60%.
-Rare characters have equal aptitude in all elements.
-Aptitude affects experience gain, not maximum level or bonuses.
+Random aptitude affects experience: 100% for the strongest element, 80% for neighbours, 60% for the other two. Rare characters have 100% in all elements. Maximum level and bonuses are unaffected.
 
 All elements share one Elemental level, up to 100. Successful melee or crossbow hits can earn experience while an element is active.
 Open the character's stats and select ENCHANTMENT to choose elements and view aptitude, experience and bonuses.
 
-[b]Optional Mod Config Menu setting:[/b] In Options > MCM > Elemental Enchantment, enable [b]All elemental aptitudes 100%[/b] to remove experience penalties for all player characters. It is off by default.
-Disabling it restores each character's original aptitude. Mod Config Menu is optional.
+[h2]Mod Config Menu settings (optional)[/h2]
+Options > MCM > Elemental Enchantment:
+[list]
+[*][b]Effect strength[/b]: 0x–5x in 0.5x steps (default 1x). At 0x, enjoy visuals only; experience still works. Applies to allies and enchanted bosses.
+[*][b]Weapon trails[/b]: Toggle attack trails without affecting other visuals.
+[*][b]All elemental aptitudes 100%[/b]: Remove player characters' experience penalties. Off by default; disabling restores original aptitudes.
+[/list]
+Mod Config Menu is optional.
 
 [h2]Progression[/h2]
 [list]
 [*][b]Level 20[/b]: Weapon trails appear while attacking.
-[*][b]Level 40[/b]: Effects grow stronger visually and flash on hits.
+[*][b]Level 40[/b]: Larger visuals and hit flashes.
 [*][b]Level 50[/b]: Unlock a secondary element at 25% strength.
 [*][b]Levels 60 / 70 / 80 / 90 / 100[/b]: Secondary strength rises to 35% / 45% / 55% / 65% / 75%.
 [*][b]Levels 80 and 100[/b]: Elemental effects grow larger visually.
@@ -56,7 +59,7 @@ This is an initial beta. Please report any problems you encounter!
 不具合があれば教えてください。
 
 [h2]属性ごとの効果[/h2]
-以下は主属性を使った場合のElementalレベル0〜100の数値です。副属性の効果は、その時点の副属性の強さに応じて小さくなります。
+主属性・倍率１倍でのレベル０〜100の数値です。副属性にはその強さに応じた補正がかかります。
 [list]
 [*][b]火[/b]：攻撃の基本切断＋打撃ダメージの5〜15%を打撃ダメージとして追加。
 [*][b]雷[/b]：防具貫通を5〜15%追加し、攻撃速度を1〜5%上昇。
@@ -66,22 +69,24 @@ This is an initial beta. Please report any problems you encounter!
 [/list]
 
 [h2]適性と経験値[/h2]
-各キャラクターにはランダムで得意属性が設定されます。
-得意属性の経験値は100%、その両隣は80%、残り２属性は60%。
-まれに全属性が得意なキャラクターもいます。
-適性は経験値の入りやすさに影響し、最終レベルや効果の上限は変わりません。
+適性はランダムで、得意属性の経験値は100%、両隣は80%、残りは60%。まれに全属性100%もいます。適性はレベルや効果の上限には影響しません。
 
 レベルは全属性で共通、上限は100です。属性を有効にして近接攻撃やクロスボウを当てると経験値が入ります。
 キャラクターの能力画面にあるENCHANTMENTから、属性の選択や適性・経験値・効果を確認できます。
 
-[b]Mod Config Menuの任意設定：[/b] 設定 → MCM → Elemental Enchantmentで「All elemental aptitudes 100%」をオンにすると、全キャラクターの全属性の経験値が100%になります。
-初期設定はオフです。オフに戻すと元の適性が適用されます。
+[h2]Mod Config Menuの設定（任意）[/h2]
+設定 → MCM → Elemental Enchantment：
+[list]
+[*][b]属性効果の倍率[/b]：０〜５倍を0.5倍刻みで調整（初期値１倍）。０倍は見た目だけになり、経験値は入ります。仲間と属性付きボスに適用。
+[*][b]武器の軌跡[/b]：攻撃時の軌跡をオン・オフ。他のエフェクトは残ります。
+[*][b]全属性の適性100%[/b]：仲間の経験値減少をなくします。初期設定はオフ。オフに戻すと元の適性が適用されます。
+[/list]
 Mod Config Menuは必須ではありません。
 
 [h2]レベルごとの解放[/h2]
 [list]
 [*][b]レベル20[/b]：攻撃時に武器の軌跡が出現。
-[*][b]レベル40[/b]：エフェクトが大きくなり、攻撃命中時に強く光ります。
+[*][b]レベル40[/b]：エフェクトが大きくなり、命中時に光ります。
 [*][b]レベル50[/b]：副属性が解放。最初は25%の強さで効果を発揮します。
 [*][b]レベル60／70／80／90／100[/b]：副属性の強さが35%／45%／55%／65%／75%へ上昇。
 [*][b]レベル80・100[/b]：エフェクトがさらに大きくなります。
