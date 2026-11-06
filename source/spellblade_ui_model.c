@@ -4,7 +4,7 @@ void sb_ui_bind(SBUIModel* u,void* window,void* character,unsigned int index,uns
 {
     if(!u)return;
     if(!window||!character||!affinity){sb_ui_reset(u);return;}
-    if(u->window!=window||u->character!=character||u->index!=index||u->serial!=serial)u->visible=0;
+    if(u->window!=window)u->visible=0;
     u->window=window;u->character=character;u->index=index;u->serial=serial;
     u->affinity=*affinity;u->editable=editable?1:0;u->has_affinity=1;
 }

@@ -19,7 +19,12 @@ typedef struct SBMyGUI {
     void (*set_font)(void*,const SBGameString*);
     void (*set_style)(void*,int,const SBGameString*);
     void (*set_size)(void*,int,int);
+    void (*set_position)(void*,int,int);
     void (*set_property)(void*,const SBGameString*,const SBGameString*);
+    int (*get_font_height)(void*);
+    void (*set_font_height)(void*,int);
+    unsigned int scale_tenths;
+    unsigned int scale_x100,scale_y100;
 } SBMyGUI;
 /* Construct the generic view backend for the supplied resolved API. UI calls
  * must run on the MyGUI thread. */

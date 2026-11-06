@@ -1,6 +1,9 @@
 #include "spellblade_ui_view.h"
 #include "spellblade_localization.h"
 static const int ring_order[5]={0,2,4,3,1};
+static unsigned int ui_view_scale_tenths=10010010;
+void sb_ui_view_set_geometry_scale(unsigned int x,unsigned int y,unsigned int manual){ui_view_scale_tenths=x*100000u+y*100u+manual;}
+void sb_ui_view_set_scale(unsigned int tenths){tenths=tenths<8?8:tenths>20?20:tenths;sb_ui_view_set_geometry_scale(100,100,tenths);}
 static unsigned int ui_effect_tenths=10;
 void sb_ui_view_set_effect_multiplier(float multiplier){ui_effect_tenths=!(multiplier>0.0f)?0:multiplier>=5.0f?50:(unsigned int)(multiplier*10.0f+0.5f);}
 static int add(char* out,int pos,int cap,const char* text){while(text&&*text&&pos<cap-1)out[pos++]=*text++;out[pos]=0;return pos;}
@@ -10,18 +13,18 @@ static unsigned int ui_level(const SBAffinity* a){unsigned int lo=0,hi=100;while
 static unsigned int ui_secondary_percent(unsigned int l){return l<50?0:l<60?25:l<70?35:l<80?45:l<90?55:l<100?65:75;}
 static void selection_title(char out[256],const SBAffinity* a,int second_mode)
 {const SBLocale* l=sb_locale_get();int i=0;unsigned e=a->selected;(void)second_mode;i=add(out,i,256,l->main);i=add(out,i,256,"  ");i=add(out,i,256,e<=5?l->element[e]:l->element[0]);i=add(out,i,256,"     ");i=add(out,i,256,l->sub);i=add(out,i,256,"  ");e=a->secondary;add(out,i,256,ui_level(a)<50?l->locked:(e<=5?l->element[e]:l->element[0]));}
-void sb_ui_view_init(SBUIView* v) {int i;if(!v)return;sb_ui_reset(&v->model);v->parent=0;v->opener=0;v->panel=0;v->body=0;v->paper=0;v->header=0;v->window_title=0;v->graph=0;v->close=0;v->status=0;v->bar=0;v->fill=0;v->title=0;v->effect=0;v->detail=0;v->mode_main=0;v->mode_second=0;v->milestone=0;v->xp_label=0;v->xp_percent=0;v->second_mode=0;v->graph_ready=0;for(i=0;i<5;++i){v->labels[i]=0;v->axis_labels[i]=0;}for(i=0;i<6;++i)v->buttons[i]=0;}
+void sb_ui_view_init(SBUIView* v) {int i;if(!v)return;sb_ui_reset(&v->model);v->parent=0;v->opener=0;v->panel=0;v->body=0;v->paper=0;v->header=0;v->window_title=0;v->graph=0;v->close=0;v->status=0;v->bar=0;v->fill=0;v->title=0;v->effect=0;v->detail=0;v->mode_main=0;v->mode_second=0;v->milestone=0;v->xp_label=0;v->xp_percent=0;v->second_mode=0;v->graph_ready=0;v->built_scale_tenths=0;for(i=0;i<5;++i){v->labels[i]=0;v->axis_labels[i]=0;}for(i=0;i<6;++i)v->buttons[i]=0;}
 static int valid(const SBUIViewAPI* a){return a&&a->create&&a->destroy&&a->visible&&a->caption&&a->selected&&a->radar&&a->progress;}
 void sb_ui_view_dispose(SBUIView* v,const SBUIViewAPI* a){if(!v||!valid(a))return;if(v->panel)a->destroy(a->context,v->panel);if(v->opener)a->destroy(a->context,v->opener);sb_ui_view_init(v);}
 int sb_ui_view_build(SBUIView* v,const SBUIViewAPI* a,void* parent,int width,int height)
 {
     int i,x;if(!v||!valid(a)||!parent||width<300||height<260)return 0;
-    if(v->parent==parent&&v->opener&&v->panel)return 1;
-    if(v->parent)sb_ui_view_dispose(v,a);v->parent=parent;
+    if(v->parent==parent&&v->opener&&v->panel&&v->built_scale_tenths==ui_view_scale_tenths)return 1;
+    if(v->parent){SBUIModel saved=v->model;int mode=v->second_mode;sb_ui_view_dispose(v,a);v->model=saved;v->second_mode=mode;}v->parent=parent;v->built_scale_tenths=ui_view_scale_tenths;
     x=width+12;
     /* Place inside the unused area below the attributes list. The outer
      * window height includes borders and is not the child client height. */
-    v->opener=a->create(a->context,parent,SB_UI_BUTTON,15,260,170,26);
+    v->opener=a->create(a->context,parent,SB_UI_OPENER,15,260,170,26);
     v->panel=a->create(a->context,parent,SB_UI_PANEL,x,10,530,448);
     if(!v->opener||!v->panel)goto fail;
     a->caption(a->context,v->opener,sb_locale_get()->opener);a->visible(a->context,v->panel,0);

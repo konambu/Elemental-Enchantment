@@ -16,7 +16,7 @@ typedef struct { float w,x,y,z; } Quat;
 #include "spellblade_localization.h"
 #include "spellblade_mcm_strings.h"
 #endif
-typedef struct { void* owner; void* blade; void* tag; void* scene; void* parent; void* node; void* effect; void* effect2; U64 born; float length;float applied_scale; int pole; int element;int secondary;int level;
+typedef struct { void* owner; void* blade; void* tag; void* scene; void* parent; void* node; void* effect; void* effect2; void* frost;void* frost_scene;void* frost_node;Quat frost_rotation;Vec frost_offset;int frost_bone,frost_attached; U64 born; float length;float applied_scale; int pole; int element;int secondary;int level;
 #ifdef SB_ENABLE_TRAIL
     void* ribbon;void* ribbon_node;void* ribbon_root;Vec trail_direction;int trail_has_direction;float trail_idle;int trail_element,trail_linked,trail_attached;
 #endif
@@ -48,7 +48,7 @@ typedef struct {void* character;void* body;void* bone;void* scene;void* parent;v
 static HandFire hand_fires[SB_ALLY_LIMIT*2];
 static void* guard; static DWORD internal; static int active,logged_full; static U64 serial;
 static char log_path[1024]; static MODULE self;
-static char settings_path[1024]; static int all_aptitudes; static float effect_multiplier=1.0f; static unsigned int xp_tenths=10; static int show_trails=1,show_impacts=1;
+static char settings_path[1024]; static int all_aptitudes; static float effect_multiplier=1.0f; static unsigned int xp_tenths=10,ui_scale_tenths=10; static int show_trails=1,show_impacts=1;
 #ifdef SB_ENABLE_UI
 static void select_game_locale(void);
 #endif
@@ -69,10 +69,13 @@ static void __cdecl reload_settings(void) {
     effect_multiplier=(float)parse_multiplier_tenths(m,50u)/10.0f;
     if(settings_path[0])GetPrivateProfileStringA("General","ExperienceMultiplier","1",m,sizeof(m),settings_path);else{m[0]='1';m[1]=0;}
     xp_tenths=parse_multiplier_tenths(m,200u);
+    if(settings_path[0])GetPrivateProfileStringA("General","UIScale","1",m,sizeof(m),settings_path);else{m[0]='1';m[1]=0;}
+    ui_scale_tenths=parse_multiplier_tenths(m,20u);if(ui_scale_tenths<8)ui_scale_tenths=8;
     show_trails=!settings_path[0]||GetPrivateProfileIntA("General","ShowWeaponTrails",1,settings_path)!=0;
     show_impacts=!settings_path[0]||GetPrivateProfileIntA("General","ShowImpactEffects",1,settings_path)!=0;
 #ifdef SB_ENABLE_UI
     sb_ui_view_set_effect_multiplier(effect_multiplier);
+    sb_ui_view_set_scale(ui_scale_tenths);
 #endif
 }
 __declspec(dllexport) void __cdecl MCM_Describe(MCM_Api* api) {
@@ -88,7 +91,9 @@ __declspec(dllexport) void __cdecl MCM_Describe(MCM_Api* api) {
      api->section(api,t->section);
      if(api->number)api->number(api,"General","EffectMultiplier",t->strength,t->strength_tip,1.0f,0.0f,5.0f,1,0);
      api->toggle(api,"General","ShowWeaponTrails",t->trails,t->trails_tip,1,0);
-     api->toggle(api,"General","ShowImpactEffects",t->impact,t->impact_tip,1,0);}
+     api->toggle(api,"General","ShowImpactEffects",t->impact,t->impact_tip,1,0);
+     api->section(api,t->ui_section);
+     if(api->number)api->number(api,"General","UIScale",t->ui_scale,t->ui_scale_tip,1.0f,0.8f,2.0f,1,0);}
 #else
     api->section(api,"Aptitude");
     api->toggle(api,"General","AllAptitudes100","All elemental aptitudes 100%","All characters gain elemental experience at 100% speed.",0,0);
@@ -97,6 +102,8 @@ __declspec(dllexport) void __cdecl MCM_Describe(MCM_Api* api) {
     if(api->number)api->number(api,"General","EffectMultiplier","Effect strength (x)","0: visuals only; 1: normal; 5: five times.",1.0f,0.0f,5.0f,1,0);
     api->toggle(api,"General","ShowWeaponTrails","Weapon trails","Show weapon trails while attacking.",1,0);
     api->toggle(api,"General","ShowImpactEffects","Impact effects","Show elemental bursts on hits from level 40.",1,0);
+    api->section(api,"Interface");
+    if(api->number)api->number(api,"General","UIScale","Enchantment panel scale","Change the size of the enchantment panel.",1.0f,0.8f,2.0f,1,0);
 #endif
 }
 
@@ -123,6 +130,11 @@ static void (*particle_bounds)(void*,unsigned char,float);
 static void* (*particle_technique)(void*,U64); static void* (*technique_emitter)(void*,U64); static void (*box_height)(void*,float);
 static void (*set_aabb)(void*,const float*); static void (*set_queue)(void*,unsigned char);
 static void* (*node_create)(void*,int); static void (*node_destroy)(void*,void*);
+static void* (*frost_entity_create)(void*,const void*,int);
+static void (*frost_entity_material)(void*,const String*,const String*);
+static unsigned char (*frost_get_visible)(void*);
+static void (*frost_set_visible)(void*,unsigned char);
+static void (*frost_cast_shadows)(void*,unsigned char);
 static void (*node_add)(void*,void*); static void (*node_position)(void*,const Vec*);
 static void (*node_scale)(void*,const Vec*);
 static void (*node_rotation)(void*,float,float,float,float); static void (*node_attach)(void*,void*);
@@ -264,7 +276,26 @@ static int boss_diag_character(void* character) {
 static int eq(const String* s,const char* text) { U64 i; const char* p; if(!s || s->size>1024 || s->capacity<s->size)return 0; p=s->capacity<16?s->text.small:s->text.heap; if(!p)return 0; for(i=0;i<s->size && text[i];++i)if(p[i]!=text[i])return 0; return i==s->size && !text[i]; }
 static int has(const String* s,const char* part) { U64 i,j;const char* p; if(!s || !s->size || s->size>1024 || s->capacity<s->size)return 0;p=s->capacity<16?s->text.small:s->text.heap;if(!p)return 0;for(i=0;i<s->size;++i) {for(j=0;part[j] && i+j<s->size;++j) {char x=p[i+j];if(x>='A' && x<='Z')x+='a'-'A';if(x!=part[j])break;}if(!part[j])return 1;}return 0; }
 static int blade_name(const String* s) {return has(s,"katana")||has(s,"sword")||has(s,"sabre")||has(s,"blade");}
+static void frost_clear(Entry* e){void* obj=e->frost;void* scene=e->frost_scene;void* node=e->frost_node;int attached=e->frost_attached;e->frost=0;e->frost_scene=0;e->frost_node=0;e->frost_attached=0;if(obj&&scene){if(attached&&node)original_scene_detach(node,obj);original_destroy_entity(scene,obj);}if(node&&scene)node_destroy(scene,node);}
+static void frost_update(Entry* e,int wanted){
+    void* mesh;void* obj;const Vec* p;const Quat* q;String material={{"EE_IceFrost"},11,15,0},group={{"Autodetect"},10,15,0};
+    if(!wanted){if(e->frost||e->frost_node)frost_clear(e);return;}
+    __try {
+        p=e->tag?tag_position(e->tag):0;q=e->tag?tag_rotation(e->tag):0;
+        if(!p||!q)return;
+        if(e->frost){if(frost_get_visible&&frost_set_visible){unsigned char visible=frost_get_visible(e->blade);if(frost_get_visible(e->frost)!=visible)frost_set_visible(e->frost,visible);}if(e->frost_node){node_position(e->frost_node,p);node_rotation(e->frost_node,q->w,q->x,q->y,q->z);}return;}
+        if(!e->frost_bone||!e->scene||!e->parent||!frost_entity_create||!frost_entity_material||!frost_get_visible||!frost_set_visible||!frost_cast_shadows||!original_scene_detach)return;
+        mesh=entity_mesh(e->blade);if(!mesh||!*(void**)mesh)return;
+        e->frost_node=node_create(e->scene,0);if(!e->frost_node)return;e->frost_scene=e->scene;
+        node_add(e->parent,e->frost_node);node_position(e->frost_node,p);node_rotation(e->frost_node,q->w,q->x,q->y,q->z);
+        obj=frost_entity_create(e->scene,mesh,0);if(!obj){frost_clear(e);return;}
+        e->frost=obj;
+        frost_entity_material(obj,&material,&group);
+        frost_cast_shadows(obj,0);node_attach(e->frost_node,obj);e->frost_attached=1;frost_set_visible(obj,frost_get_visible(e->blade));
+    } __except(1) {__try {frost_clear(e);} __except(1) {e->frost=0;e->frost_scene=0;e->frost_node=0;e->frost_attached=0;}e->frost_bone=0;logline("FROST: disabled for an unsupported weapon.\r\n");}
+}
 static void cleanup(Entry* e) {
+    if(e->frost||e->frost_node)frost_clear(e);
 #ifdef SB_ENABLE_TRAIL
     trail_cleanup(e);
 #endif
@@ -282,7 +313,7 @@ static void* attach_hook(void* owner,const void* bone,void* object,const void* o
         if(has(resource_name(*mesh),"sheath") || has(resource_name(*mesh),"crossbow") || has(resource_name(*mesh),"arcane_focus") || has(resource_name(*mesh),"holster"))return tag;
         box=mesh_bounds(*mesh);max=box?bounds_maximum(box):0;length=max?max->y:10.0f;pole=has(resource_name(*mesh),"polearm")||has(resource_name(*mesh),"spear");
         AcquireSRWLockExclusive(&guard);for(i=0;i<SB_TRACK_LIMIT;++i)if(entries[i].blade==object)break;
-        if(i==SB_TRACK_LIMIT){for(i=0;i<SB_TRACK_LIMIT;++i)if(!entries[i].blade){entries[i].owner=owner;entries[i].blade=object;entries[i].tag=tag;entries[i].born=GetTickCount64();entries[i].length=(length>2 && length<80)?length:10.0f;entries[i].pole=pole;break;}if(i==SB_TRACK_LIMIT && !logged_full){logged_full=1;logline("CAPACITY: all weapon tracking slots are in use.\r\n");}}
+        if(i==SB_TRACK_LIMIT){for(i=0;i<SB_TRACK_LIMIT;++i)if(!entries[i].blade){entries[i].owner=owner;entries[i].blade=object;entries[i].tag=tag;entries[i].born=GetTickCount64();entries[i].length=(length>2 && length<80)?length:10.0f;entries[i].pole=pole;entries[i].frost_bone=eq((const String*)bone,"Bip01 Prop1")?1:eq((const String*)bone,"Bip01 Prop2")?2:3;if(orientation&&offset){entries[i].frost_rotation=*(const Quat*)orientation;entries[i].frost_offset=*(const Vec*)offset;}else entries[i].frost_bone=0;break;}if(i==SB_TRACK_LIMIT && !logged_full){logged_full=1;logline("CAPACITY: all weapon tracking slots are in use.\r\n");}}
         ReleaseSRWLockExclusive(&guard);
     } __except(1) {logline("SKIP: blade metadata unavailable.\r\n");} return tag;
 }
@@ -463,7 +494,7 @@ static void* create_secondary_effect(void* manager,void* scene,void* node,const 
     if(!scene||!node||!particle_template(manager,tmpl))return 0;
     for(j=0;j<8;++j)name.text.small[4+j]="0123456789abcdef"[(n>>(28-j*4))&15];
     effect=particle_create(manager,&name,tmpl,scene);if(!effect)return 0;
-    if(height>0.0f){tech=particle_technique(effect,0);emitter=tech?technique_emitter(tech,0):0;if(!emitter){particle_destroy(manager,effect,scene);return 0;}box_height(emitter,height);if(tmpl->size==27||tmpl->size==23){tech=particle_technique(effect,1);emitter=tech?technique_emitter(tech,0):0;if(emitter)box_height(emitter,height);}}
+    if(height>0.0f){tech=particle_technique(effect,0);emitter=tech?technique_emitter(tech,0):0;if(!emitter){particle_destroy(manager,effect,scene);return 0;}box_height(emitter,height);if(tmpl->size==27||tmpl->size==23){tech=particle_technique(effect,1);emitter=tech?technique_emitter(tech,0):0;if(emitter)box_height(emitter,height);}if(tmpl->size==23){tech=particle_technique(effect,2);emitter=tech?technique_emitter(tech,0):0;if(emitter)box_height(emitter,height);}}
     node_attach(node,effect);particle_local(effect,1);set_queue(effect,84);particle_start(effect);particle_bounds(effect,0,0);return effect;
 }
 #include "impact_visual.inl"
@@ -502,11 +533,14 @@ static void update(float dt) {
             for(j=0;j<8;++j)name.text.small[4+j]="0123456789abcdef"[(n>>(28-j*4))&15];
             if(!particle_template(manager,tmpl)){cleanup(e);continue;}e->element=element;e->effect=particle_create(manager,&name,tmpl,e->scene);e->node=node_create(e->scene,0);
             if(!e->effect || !e->node){cleanup(e);continue;}
-            {float start=e->length*(e->pole?.45f:.12f),end=e->length*.98f;void* tech=particle_technique(e->effect,0);void* emitter=tech?technique_emitter(tech,0):0;if(!emitter){cleanup(e);continue;}box_height(emitter,end-start);if(element==2||element==4){tech=particle_technique(e->effect,1);emitter=tech?technique_emitter(tech,0):0;if(emitter)box_height(emitter,end-start);}node_add(parent,e->node);node_attach(e->node,e->effect);particle_local(e->effect,1);}
+            {float start=e->length*(e->pole?.45f:.12f),end=e->length*.98f;void* tech=particle_technique(e->effect,0);void* emitter=tech?technique_emitter(tech,0):0;if(!emitter){cleanup(e);continue;}box_height(emitter,end-start);if(element==2||element==4){tech=particle_technique(e->effect,1);emitter=tech?technique_emitter(tech,0):0;if(emitter)box_height(emitter,end-start);}if(element==4){tech=particle_technique(e->effect,2);emitter=tech?technique_emitter(tech,0):0;if(emitter)box_height(emitter,end-start);}node_add(parent,e->node);node_attach(e->node,e->effect);particle_local(e->effect,1);}
             set_queue(e->effect,84);particle_start(e->effect);particle_bounds(e->effect,0,0);
         }
         if(e->effect2&&e->secondary!=secondary){particle_destroy(manager,e->effect2,e->scene);e->effect2=0;e->secondary=0;}
         if(secondary&&!e->effect2){float start=e->length*(e->pole?.45f:.12f),end=e->length*.98f;const String* second=secondary==5?&ice:(secondary==4?&water:(secondary==3?&wind:(secondary==2?&light:&fire)));e->effect2=create_secondary_effect(manager,e->scene,e->node,second,end-start);if(e->effect2)e->secondary=secondary;}
+#ifdef SB_ICE_OVERLAY_EXPERIMENTAL
+        frost_update(e,element==5||secondary==5);
+#endif
         {float scale=visual_scale(e->level,ally->hit_glow);if(scale!=e->applied_scale){Vec size={scale,scale,scale};node_scale(e->node,&size);e->applied_scale=scale;}}
         p=tag_position(e->tag);q=tag_rotation(e->tag);if(p && q){float start=e->length*(e->pole?.45f:.12f),end=e->length*.98f,off=(start+end)*.5f-5.0f;Vec adjusted={p->x+2*(q->x*q->y-q->w*q->z)*off,p->y+(1-2*(q->x*q->x+q->z*q->z))*off,p->z+2*(q->y*q->z+q->w*q->x)*off};node_position(e->node,&adjusted);node_rotation(e->node,q->w,q->x,q->y,q->z);
 #ifdef SB_ENABLE_TRAIL
@@ -517,7 +551,52 @@ static void update(float dt) {
         if(e->effect2){particle_update(e->effect2,dt);set_aabb(e->effect2,bounds);}
     }update_hands(manager,dt);impact_update(manager,dt);cb_update_visuals(manager,dt);for(i=0;i<SB_ALLY_LIMIT;++i)if(allies[i].hit_glow>0.0f){allies[i].hit_glow-=dt;if(allies[i].hit_glow<0.0f)allies[i].hit_glow=0.0f;}} __finally {internal=0;ReleaseSRWLockExclusive(&guard);}
 }
-static void gpu_hook(void* world,float dt) {original_gpu(world,dt);if(active)__try {update(dt);} __except(1) {active=0;logline("DISABLED: sword-fire update failed. Restart without probe.\r\n");}}
+#ifdef SB_FROST_RELOAD_DEV
+typedef struct {void* object;void* info;} SBFrostSharedTexture;
+static SBFrostSharedTexture frost_dev_texture;
+static int frost_dev_disabled;
+static void frost_dev_text(char** p,const char* s){while(*s)*(*p)++=*s++;}
+static void frost_dev_num(char** p,unsigned v){char b[12];unsigned n=0;do{b[n++]=(char)('0'+v%10);v/=10;}while(v&&n<11);while(n)*(*p)++=b[--n];}
+static void frost_dev_report(void){
+    MODULE ogre=GetModuleHandleA("OgreMain_x64.dll");unsigned char (*queue)(void*);unsigned char (*visible)(void*);int i,count=0;
+    *(void**)(&queue)=GetProcAddress(ogre,"?getRenderQueueGroup@MovableObject@Ogre@@QEBAEXZ");
+    *(void**)(&visible)=GetProcAddress(ogre,"?getVisible@MovableObject@Ogre@@QEBA_NXZ");
+    AcquireSRWLockExclusive(&guard);__try {for(i=0;i<SB_TRACK_LIMIT&&count<12;++i){Entry* e=&entries[i];char line[512],*p=line;void** m;const String* s;const char* n;U64 j;
+        if(!e->blade||(e->element!=5&&e->secondary!=5))continue;
+        __try {
+            frost_dev_text(&p,"FROST DIAG: mesh=");m=(void**)entity_mesh(e->blade);s=m&&*m?resource_name(*m):0;n=s?(s->capacity<16?s->text.small:s->text.heap):0;
+            if(n&&s->size<=160)for(j=0;j<s->size;++j)*p++=n[j];else frost_dev_text(&p,"unknown");
+            frost_dev_text(&p," bone=");frost_dev_num(&p,(unsigned)e->frost_bone);frost_dev_text(&p," layer=");frost_dev_num(&p,e->frost?1:0);frost_dev_text(&p," attached=");frost_dev_num(&p,(unsigned)e->frost_attached);
+            if(queue&&visible&&e->frost){frost_dev_text(&p," queue_blade=");frost_dev_num(&p,queue(e->blade));frost_dev_text(&p," queue_layer=");frost_dev_num(&p,queue(e->frost));frost_dev_text(&p," visible_blade=");frost_dev_num(&p,visible(e->blade));frost_dev_text(&p," visible_layer=");frost_dev_num(&p,visible(e->frost));}
+            *p++='\r';*p++='\n';*p=0;{DWORD written;void* file=CreateFileA(log_path,4,3,0,4,0x80,0);if(file!=(void*)(U64)-1){WriteFile(file,line,(DWORD)(p-line),&written,0);CloseHandle(file);}}++count;
+        }__except(1){}
+    }}__finally {ReleaseSRWLockExclusive(&guard);}
+    if(!count)logline("FROST DIAG: no currently tracked ice weapon.\r\n");
+}
+static int frost_dev_reload(void){
+    MODULE ogre=GetModuleHandleA("OgreMain_x64.dll");void* manager;
+    void* (*instance)(void);void* (*get_texture)(void*,SBFrostSharedTexture*,const String*,const String*);void (*reload)(void*);
+    String name={{0},15,15,0},group={{"Autodetect"},10,15,0};const char* n="EE_IceFrost.png";unsigned i;
+    if(!ogre||frost_dev_disabled)return 0;
+    *(void**)(&instance)=GetProcAddress(ogre,"?getSingletonPtr@TextureManager@Ogre@@SAPEAV12@XZ");
+    *(void**)(&get_texture)=GetProcAddress(ogre,"?getByName@TextureManager@Ogre@@QEAA?AV?$SharedPtr@VTexture@Ogre@@@2@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@0@Z");
+    *(void**)(&reload)=GetProcAddress(ogre,"?reload@Resource@Ogre@@UEAAXXZ");
+    if(!instance||!get_texture||!reload)return 0;
+    __try {
+        if(!frost_dev_texture.object){manager=instance();if(!manager)return 0;for(i=0;i<15;++i)name.text.small[i]=n[i];name.text.small[15]=0;get_texture(manager,&frost_dev_texture,&name,&group);}
+        if(!frost_dev_texture.object)return 0;reload(frost_dev_texture.object);logline("FROST DEV: texture reloaded.\r\n");return 1;
+    } __except(1) {frost_dev_disabled=1;logline("FROST DEV: reload disabled after native error.\r\n");return 0;}
+}
+static void frost_dev_poll(void){static U64 next;static int seen=-1;U64 now=GetTickCount64();int serial;if(!settings_path[0]||now<next)return;next=now+1000;serial=(int)GetPrivateProfileIntA("Developer","FrostReloadSerial",0,settings_path);if(seen<0){seen=serial;return;}if(serial!=seen&&frost_dev_reload()){seen=serial;frost_dev_report();}}
+#ifdef SPELLBLADE_NATIVE_TEST
+__declspec(dllexport) int probeTestFrostReload(void){return frost_dev_reload();}
+#endif
+#endif
+static void gpu_hook(void* world,float dt) {original_gpu(world,dt);if(active)__try {
+#ifdef SB_FROST_RELOAD_DEV
+    frost_dev_poll();
+#endif
+    update(dt);} __except(1) {active=0;logline("DISABLED: sword-fire update failed. Restart without probe.\r\n");}}
 static int distinct_hook_targets(void* a,void* b){return a&&b&&a!=b;}
 static int module_matches(MODULE m,unsigned int stamp,unsigned int size) {unsigned char* b=(unsigned char*)m;unsigned int p;if(!b || *(unsigned short*)b!=0x5a4d)return 0;p=*(unsigned int*)(b+0x3c);return *(unsigned int*)(b+p)==0x4550 && *(unsigned int*)(b+p+8)==stamp && *(unsigned int*)(b+p+80)==size;}
 __declspec(dllexport) void startPlugin(void) {
@@ -586,8 +665,11 @@ __declspec(dllexport) void startPlugin(void) {
     API(mygui_api.gui_instance,mygui,"?getInstancePtr@?$Singleton@VGui@MyGUI@@@MyGUI@@SAPEAVGui@2@XZ");
     API(mygui_api.create_widget,mygui,"?createWidgetT@Widget@MyGUI@@QEAAPEAV12@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@0AEBU?$TCoord@H@types@2@UAlign@2@0@Z");
     API(mygui_api.set_font,mygui,"?setFontName@TextBox@MyGUI@@UEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z");
+    *(void**)(&mygui_api.get_font_height)=GetProcAddress(mygui,"?getFontHeight@TextBox@MyGUI@@QEAAHXZ");
+    *(void**)(&mygui_api.set_font_height)=GetProcAddress(mygui,"?setFontHeight@TextBox@MyGUI@@UEAAXH@Z");
     API(mygui_api.set_style,mygui,"?setWidgetStyle@Widget@MyGUI@@QEAAXUWidgetStyle@2@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z");
     API(mygui_api.set_size,mygui,"?setSize@Widget@MyGUI@@QEAAXHH@Z");
+    *(void**)(&mygui_api.set_position)=GetProcAddress(mygui,"?setPosition@Widget@MyGUI@@QEAAXHH@Z");
     API(mygui_api.set_property,mygui,"?setProperty@Widget@MyGUI@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@0@Z");
     API(mygui_api.destroy_widget,mygui,"?destroyWidget@Gui@MyGUI@@QEAAXPEAVWidget@2@@Z");
     API(mygui_api.set_visible,mygui,"?setVisible@Widget@MyGUI@@UEAAX_N@Z");
@@ -608,6 +690,11 @@ __declspec(dllexport) void startPlugin(void) {
     if(!char_update||!char_destroy)ok=0;
     entity_vtable=GetProcAddress(ogre,"??_7Entity@Ogre@@6BMovableObject@1@@");if(!entity_vtable)ok=0;
     API(entity_mesh,ogre,"?getMesh@Entity@Ogre@@QEBAAEBV?$SharedPtr@VMesh@Ogre@@@2@XZ");
+    *(void**)(&frost_entity_create)=GetProcAddress(ogre,"?createEntity@SceneManager@Ogre@@UEAAPEAVEntity@2@AEBV?$SharedPtr@VMesh@Ogre@@@2@W4SceneMemoryMgrTypes@2@@Z");
+    *(void**)(&frost_entity_material)=GetProcAddress(ogre,"?setMaterialName@Entity@Ogre@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@0@Z");
+    *(void**)(&frost_get_visible)=GetProcAddress(ogre,"?getVisible@MovableObject@Ogre@@QEBA_NXZ");
+    *(void**)(&frost_set_visible)=GetProcAddress(ogre,"?setVisible@MovableObject@Ogre@@QEAAX_N@Z");
+    *(void**)(&frost_cast_shadows)=GetProcAddress(ogre,"?setCastShadows@MovableObject@Ogre@@QEAAX_N@Z");
     API(mesh_bounds,ogre,"?getBounds@Mesh@Ogre@@QEBAAEBVAxisAlignedBox@2@XZ");API(bounds_maximum,ogre,"?getMaximum@AxisAlignedBox@Ogre@@QEBAAEBVVector3@2@XZ");
     API(resource_name,ogre,"?getName@Resource@Ogre@@UEBAAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ");
     API(parent_node,ogre,"?getParentSceneNode@MovableObject@Ogre@@QEBAPEAVSceneNode@2@XZ");API(node_scene,ogre,"?getCreator@SceneNode@Ogre@@QEBAPEAVSceneManager@2@XZ");
@@ -675,6 +762,7 @@ __declspec(dllexport) void startPlugin(void) {
     if(!ui_clear||hook(ui_clear,stats_window_clear_hook,(void**)&original_stats_window_clear)!=0||!original_stats_window_clear)ok=0;
     if(!ui_destroy||hook(ui_destroy,stats_window_destroy_hook,(void**)&original_stats_window_destroy)!=0||!original_stats_window_destroy)ok=0;
     HOOK(mygui,"?injectMousePress@InputManager@MyGUI@@QEAA_NHHUMouseButton@2@@Z",mouse_press_hook,original_mouse_press);
+    if(mygui_api.set_position){HOOK(mygui,"?injectMouseMove@InputManager@MyGUI@@QEAA_NHHH@Z",mouse_move_hook,original_mouse_move);HOOK(mygui,"?injectMouseRelease@InputManager@MyGUI@@QEAA_NHHUMouseButton@2@@Z",mouse_release_hook,original_mouse_release);}
 #endif
     target=gpu_target;if(!ok||!target||hook(target,gpu_hook,(void**)&original_gpu)!=0||!original_gpu){logline("INACTIVE: native hooks unavailable.\r\n");return;}
     active=1;
@@ -693,6 +781,7 @@ __declspec(dllexport) int probeTestImpactSetting(void){Vec p={1,2,3};int i;for(i
 __declspec(dllexport) float probeTestMultiplierFromIni(const char* path){unsigned i;if(!path)return -1.0f;for(i=0;i<sizeof(settings_path)-1&&path[i];++i)settings_path[i]=path[i];settings_path[i]=0;reload_settings();return effect_multiplier;}
 __declspec(dllexport) int probeTestImpactSettingFromIni(const char* path){if(!path)return -1;probeTestMultiplierFromIni(path);return show_impacts;}
 __declspec(dllexport) int probeTestXPSettingFromIni(const char* path){if(!path)return -1;probeTestMultiplierFromIni(path);return (int)xp_tenths;}
+__declspec(dllexport) int probeTestUIScaleFromIni(const char* path){if(!path)return -1;probeTestMultiplierFromIni(path);return (int)ui_scale_tenths;}
 __declspec(dllexport) int probeTestXPScaling(void){SBAffinity base,a,b;int i,record[3];for(i=0;i<10000;++i){sb_affinity_create(&base,(unsigned)i,1);if(base.rates[0]==60)break;}if(i==10000)return 1;
     a=base;a.xp_fraction=37;if(!sb_affinity_award_hit_rate_scaled(&a,0,0)||a.xp[0]||a.xp_fraction!=37)return 2;
     a=base;for(i=0;i<25;++i)sb_affinity_award_hit_rate_scaled(&a,0,5);if(a.xp[0]!=30||a.xp_fraction)return 3;
@@ -730,12 +819,12 @@ static int test_mcm_int_seen,test_mcm_toggle_count,test_mcm_bad;
 static void __cdecl test_mcm_begin(MCM_Api* a,const char* id,const char* title,const char* path,void (__cdecl *apply)(void)){(void)a;if(!id||!title||!path||!apply)test_mcm_bad=1;}
 static void __cdecl test_mcm_section(MCM_Api* a,const char* title){(void)a;if(!title||!*title)test_mcm_bad=1;}
 static void __cdecl test_mcm_toggle(MCM_Api* a,const char* section,const char* key,const char* label,const char* tip,int def,unsigned flags){(void)a;(void)section;(void)key;(void)flags;if(!label||!*label||!tip||!*tip||def!=(test_mcm_toggle_count?1:0))test_mcm_bad=1;++test_mcm_toggle_count;}
-static void __cdecl test_mcm_number(MCM_Api* a,const char* section,const char* key,const char* label,const char* tip,float def,float min,float max,int decimals,unsigned flags){(void)a;(void)section;(void)key;(void)flags;if(!label||!*label||!tip||!*tip||def!=1.0f||min!=0.0f||max!=(test_mcm_int_seen?5.0f:20.0f)||decimals!=1)test_mcm_bad=1;++test_mcm_int_seen;}
+static void __cdecl test_mcm_number(MCM_Api* a,const char* section,const char* key,const char* label,const char* tip,float def,float min,float max,int decimals,unsigned flags){float expected_min=test_mcm_int_seen==2?0.8f:0.0f;float expected_max=test_mcm_int_seen==0?20.0f:test_mcm_int_seen==1?5.0f:2.0f;(void)a;(void)section;(void)key;(void)flags;if(!label||!*label||!tip||!*tip||def!=1.0f||min!=expected_min||max!=expected_max||decimals!=1)test_mcm_bad=1;++test_mcm_int_seen;}
 __declspec(dllexport) int probeTestMcmRegistration(void)
 {
     MCM_Api api={1,0,test_mcm_begin,test_mcm_section,test_mcm_toggle,0,test_mcm_number,0};char old=settings_path[0];
     test_mcm_bad=test_mcm_int_seen=test_mcm_toggle_count=0;settings_path[0]='x';MCM_Describe(&api);settings_path[0]=old;
-    return test_mcm_bad||test_mcm_int_seen!=2||test_mcm_toggle_count!=3;
+    return test_mcm_bad||test_mcm_int_seen!=3||test_mcm_toggle_count!=3;
 }
 static Vec* (*test_node_position)(void*,Vec*);
 static float (*test_box_height)(void*);
@@ -982,6 +1071,34 @@ __declspec(dllexport) int probeTestAptitudeOverride(void) {
     return b.xp[0]==160?0:4;
 }
 __declspec(dllexport) int probeTestAffinity(void) {unsigned int i,counts[6]={0};for(i=1;i<1000;++i){unsigned int a=affinity_seed(i,7);if(a!=affinity_seed(i,7)||a<1||a>5)return 1;++counts[a];}for(i=1;i<=5;++i)if(counts[i]<120)return 2;return 0;}
+__declspec(dllexport) int probeTestFrostSetup(int slot,void* owner,void* blade,void* scene,int bone,void* tag){
+    MODULE ogre=GetModuleHandleA("OgreMain_x64.dll");Entry* e;if(!ogre||slot<0||slot>=2||!owner||!blade||!scene)return 0;e=&entries[slot];
+    *(void**)(&entity_mesh)=GetProcAddress(ogre,"?getMesh@Entity@Ogre@@QEBAAEBV?$SharedPtr@VMesh@Ogre@@@2@XZ");
+    *(void**)(&frost_entity_create)=GetProcAddress(ogre,"?createEntity@SceneManager@Ogre@@UEAAPEAVEntity@2@AEBV?$SharedPtr@VMesh@Ogre@@@2@W4SceneMemoryMgrTypes@2@@Z");
+    *(void**)(&frost_entity_material)=GetProcAddress(ogre,"?setMaterialName@Entity@Ogre@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@0@Z");
+    *(void**)(&frost_get_visible)=GetProcAddress(ogre,"?getVisible@MovableObject@Ogre@@QEBA_NXZ");
+    *(void**)(&frost_set_visible)=GetProcAddress(ogre,"?setVisible@MovableObject@Ogre@@QEAAX_N@Z");
+    *(void**)(&frost_cast_shadows)=GetProcAddress(ogre,"?setCastShadows@MovableObject@Ogre@@QEAAX_N@Z");
+    *(void**)(&parent_node)=GetProcAddress(ogre,"?getParentSceneNode@MovableObject@Ogre@@QEBAPEAVSceneNode@2@XZ");
+    *(void**)(&tag_position)=GetProcAddress(ogre,"?_getDerivedPosition@OldNode@Ogre@@UEBAAEBVVector3@2@XZ");
+    *(void**)(&tag_rotation)=GetProcAddress(ogre,"?_getDerivedOrientation@OldNode@Ogre@@UEBAAEBVQuaternion@2@XZ");
+    *(void**)(&node_create)=GetProcAddress(ogre,"?createSceneNode@SceneManager@Ogre@@UEAAPEAVSceneNode@2@W4SceneMemoryMgrTypes@2@@Z");
+    *(void**)(&node_destroy)=GetProcAddress(ogre,"?destroySceneNode@SceneManager@Ogre@@UEAAXPEAVSceneNode@2@@Z");
+    *(void**)(&node_add)=GetProcAddress(ogre,"?addChild@Node@Ogre@@QEAAXPEAV12@@Z");
+    *(void**)(&node_position)=GetProcAddress(ogre,"?setPosition@Node@Ogre@@QEAAXAEBVVector3@2@@Z");
+    *(void**)(&node_rotation)=GetProcAddress(ogre,"?setOrientation@Node@Ogre@@QEAAXMMMM@Z");
+    *(void**)(&node_attach)=GetProcAddress(ogre,"?attachObject@SceneNode@Ogre@@QEAAXPEAVMovableObject@2@@Z");
+    *(void**)(&original_scene_detach)=GetProcAddress(ogre,"?detachObject@SceneNode@Ogre@@QEAAXPEAVMovableObject@2@@Z");
+    *(void**)(&original_attach)=GetProcAddress(ogre,"?attachObjectToBone@Entity@Ogre@@QEAAPEAVTagPoint@2@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@PEAVMovableObject@2@AEBVQuaternion@2@AEBVVector3@2@@Z");
+    *(void**)(&original_detach)=GetProcAddress(ogre,"?detachObjectFromBone@Entity@Ogre@@QEAAXPEAVMovableObject@2@@Z");
+    *(void**)(&original_destroy_entity)=GetProcAddress(ogre,"?destroyEntity@SceneManager@Ogre@@UEAAXPEAVEntity@2@@Z");
+    if(!entity_mesh||!frost_entity_create||!frost_entity_material||!frost_get_visible||!frost_set_visible||!frost_cast_shadows||!parent_node||!tag_position||!tag_rotation||!node_create||!node_destroy||!node_add||!node_position||!node_rotation||!node_attach||!original_scene_detach||!original_destroy_entity)return 0;
+    e->owner=owner;e->blade=blade;e->scene=scene;e->parent=parent_node(owner);e->tag=tag;e->frost_bone=bone;return e->parent&&e->tag;
+}
+__declspec(dllexport) int probeTestFrostStep(int slot,int wanted){if(slot<0||slot>=2)return -1;frost_update(&entries[slot],wanted);return entries[slot].frost&&entries[slot].frost_attached;}
+__declspec(dllexport) int probeTestFrostVisible(int slot){if(slot<0||slot>=2||!entries[slot].frost||!frost_get_visible)return -1;return frost_get_visible(entries[slot].frost);}
+__declspec(dllexport) void* probeTestFrostObject(int slot){return slot>=0&&slot<2?entries[slot].frost:0;}
+__declspec(dllexport) void* probeTestFrostNode(int slot){return slot>=0&&slot<2?entries[slot].frost_node:0;}
 __declspec(dllexport) int probeTestInit(void* owner,void* blade,void* tag) {
     MODULE ogre=GetModuleHandleA("OgreMain_x64.dll"),pu=GetModuleHandleA("Plugin_ParticleUniverse_x64.dll");int ok=1;
     API(parent_node,ogre,"?getParentSceneNode@MovableObject@Ogre@@QEBAPEAVSceneNode@2@XZ");API(node_scene,ogre,"?getCreator@SceneNode@Ogre@@QEBAPEAVSceneManager@2@XZ");
@@ -1056,7 +1173,7 @@ __declspec(dllexport) int probeTestTrailDual(void)
 }
 __declspec(dllexport) int probeTestTrailActorSpace(void)
 {
-    Entry temp={0};Vec p={1,2,3},offset={80,30,0},world;Quat q1={1,0,0,0},q2={.9238795f,0,0,.3826834f};void* root;float expected_x,expected_y;
+    Entry temp;Vec p={1,2,3},offset={80,30,0},world;Quat q1={1,0,0,0},q2={.9238795f,0,0,.3826834f};void* root;float expected_x,expected_y;unsigned z;for(z=0;z<sizeof(temp);++z)((volatile unsigned char*)&temp)[z]=0;
     if(!entries[0].scene||!trail_supported)return 1;temp.scene=entries[0].scene;temp.length=20;temp.element=1;
     root=trail_root(temp.scene,0);temp.parent=node_create(temp.scene,0);if(!root||!temp.parent)return 2;
     node_add(root,temp.parent);node_position(temp.parent,&offset);trail_derive(temp.parent,&world);
@@ -1081,22 +1198,26 @@ __declspec(dllexport) int probeTestPositionMatches(void) {const Vec* p;const Qua
 __declspec(dllexport) void probeTestPositions(Vec* actual,Vec* target) {if(entries[0].node){test_node_position(entries[0].node,actual);*target=*tag_position(entries[0].tag);}}
 __declspec(dllexport) void probeTestCleanup(void) {erase(&entries[0]);}
 #ifdef SB_ENABLE_UI
-typedef struct SBTestWidget {int visible,selected;} SBTestWidget;
-static SBTestWidget test_widgets[40];static int test_widget_count,test_canvas_created,test_window_calls;
+typedef struct SBTestWidget {int visible,selected,font_height;SBMyGUICoord rect;} SBTestWidget;
+static SBTestWidget test_widgets[256];static int test_widget_count,test_canvas_created,test_window_calls;
 static unsigned char test_canvas_pixels[256*256*4];static void* test_mouse_focus;
 static unsigned char test_window_bytes[0xe0];
 static void* test_gui_instance(void){return (void*)1;}
-static void* test_ui_create(void* parent,const SBGameString* type,const SBGameString* skin,const SBMyGUICoord* coord,int align,const SBGameString* name) {(void)parent;(void)type;(void)skin;(void)coord;(void)name;if(align!=10||test_widget_count>=40)return 0;return &test_widgets[test_widget_count++];}
+static void* test_ui_create(void* parent,const SBGameString* type,const SBGameString* skin,const SBMyGUICoord* coord,int align,const SBGameString* name) {SBTestWidget* w;(void)parent;(void)type;(void)skin;(void)name;if(align!=10||test_widget_count>=256)return 0;w=&test_widgets[test_widget_count++];w->rect=*coord;w->font_height=20;return w;}
 static void test_ui_destroy(void* gui,void* widget){(void)gui;(void)widget;}
 static void test_ui_visible(void* widget,unsigned char on){((SBTestWidget*)widget)->visible=on;}
 static void test_ui_caption(void* widget,const SBGameString* text){(void)widget;(void)text;}
 static void test_ui_selected(void* widget,unsigned char on){((SBTestWidget*)widget)->selected=on;}
+static void test_ui_font(void* widget,const SBGameString* name){(void)widget;(void)name;}
+static int test_ui_font_height(void* widget){return ((SBTestWidget*)widget)->font_height;}
+static void test_ui_set_font_height(void* widget,int height){((SBTestWidget*)widget)->font_height=height;}
 static unsigned char test_ui_canvas_created(void* widget){(void)widget;return (unsigned char)test_canvas_created;}
 static void test_ui_canvas_create(void* widget,int w,int h,int mode,int usage,int format){(void)widget;if(w==256&&h==256&&mode==0&&usage==18&&format==4)test_canvas_created=1;}
 static int test_ui_canvas_dimension(void* widget){(void)widget;return 256;}
 static void* test_ui_canvas_lock(void* widget,int usage){(void)widget;return usage==16?test_canvas_pixels:0;}
 static void test_ui_canvas_unlock(void* widget){(void)widget;}
 static void test_ui_set_size(void* widget,int width,int height){(void)widget;(void)width;(void)height;}
+static void test_ui_set_position(void* widget,int x,int y){((SBTestWidget*)widget)->rect.left=x;((SBTestWidget*)widget)->rect.top=y;}
 static int test_ui_width(void* window){(void)window;return 700;}
 static int test_ui_height(void* window){(void)window;return 500;}
 static unsigned char test_ui_window_visible(void* window){(void)window;return 1;}
@@ -1108,24 +1229,38 @@ __declspec(dllexport) int probeTestUIHooks(void)
 {
     unsigned char* window=test_window_bytes;SBTestStats stats={{0,0},(void*)9};SBTestGameData data={{0,0,0},0};int slot;SBUIView* view;
     *(void**)(window+8)=(void*)7;*(void**)(window+0xd0)=(void*)9;
-    sb_persistence_init(&persistence);test_widget_count=0;test_canvas_created=0;test_window_calls=0;ui_failed=0;active=1;test_player_flag=1;
+    sb_persistence_init(&persistence);test_widget_count=0;test_canvas_created=0;test_window_calls=0;ui_failed=0;ui_panel_preference=1;ui_scale_tenths=10;sb_ui_view_set_scale(10);active=1;test_player_flag=1;
     character_is_player=test_is_player;character_handle=test_handle;character_stats=test_stats;test_handle_values[5]=42;test_handle_values[6]=7;
-    mygui_api.gui_instance=test_gui_instance;mygui_api.create_widget=test_ui_create;mygui_api.destroy_widget=test_ui_destroy;mygui_api.set_visible=test_ui_visible;mygui_api.set_caption=test_ui_caption;mygui_api.set_selected=test_ui_selected;
-    mygui_api.canvas_created=test_ui_canvas_created;mygui_api.canvas_create=test_ui_canvas_create;mygui_api.canvas_width=test_ui_canvas_dimension;mygui_api.canvas_height=test_ui_canvas_dimension;mygui_api.canvas_lock=test_ui_canvas_lock;mygui_api.canvas_unlock=test_ui_canvas_unlock;mygui_api.set_size=test_ui_set_size;sb_mygui_backend(&mygui_api,&ui_api);
+    mygui_api.gui_instance=test_gui_instance;mygui_api.create_widget=test_ui_create;mygui_api.destroy_widget=test_ui_destroy;mygui_api.set_visible=test_ui_visible;mygui_api.set_caption=test_ui_caption;mygui_api.set_selected=test_ui_selected;mygui_api.set_font=test_ui_font;mygui_api.get_font_height=test_ui_font_height;mygui_api.set_font_height=test_ui_set_font_height;
+    mygui_api.canvas_created=test_ui_canvas_created;mygui_api.canvas_create=test_ui_canvas_create;mygui_api.canvas_width=test_ui_canvas_dimension;mygui_api.canvas_height=test_ui_canvas_dimension;mygui_api.canvas_lock=test_ui_canvas_lock;mygui_api.canvas_unlock=test_ui_canvas_unlock;mygui_api.set_size=test_ui_set_size;mygui_api.set_position=test_ui_set_position;sb_mygui_backend(&mygui_api,&ui_api);
     stats_window_width=test_ui_width;stats_window_height=test_ui_height;stats_window_visible=test_ui_window_visible;input_focus=test_ui_focus;widget_parent=test_ui_parent;
-    original_stats_window_update=test_ui_window_original;original_stats_window_clear=test_ui_window_original;original_stats_window_destroy=test_ui_window_original;original_mouse_press=test_ui_mouse_original;
+    original_stats_window_update=test_ui_window_original;original_stats_window_clear=test_ui_window_original;original_stats_window_destroy=test_ui_window_original;original_mouse_press=test_ui_mouse_original;original_mouse_move=test_ui_mouse_original;original_mouse_release=test_ui_mouse_original;
     original_stats_save=test_stats_original;
     gamedata_api.list_exists=test_list_exists;gamedata_api.list_size=test_list_size;gamedata_api.list_name=test_list_name;gamedata_api.list_values=test_list_values;gamedata_api.find_reference=test_find_reference;gamedata_api.add_reference=test_add_reference;
-    stats_window_update_hook(window);slot=ui_find(window);if(slot<0||test_window_calls!=1)return 1;view=&stats_views[slot].view;
+    stats_window_update_hook(window);slot=ui_find(window);if(slot<0||test_window_calls!=1)return 1;view=&stats_views[slot].view;if(!view->model.visible)return 12;
     set_ally((void*)9,(void*)3,1,0,0,0,1);
-    test_mouse_focus=view->opener;if(!mouse_press_hook((void*)2,0,0,0)||!view->model.visible)return 2;
+    {int px=((SBTestWidget*)view->panel)->rect.left,py=((SBTestWidget*)view->panel)->rect.top;
+     test_mouse_focus=view->header;mouse_press_hook((void*)2,100,100,0);mouse_move_hook((void*)2,145,130,0);mouse_release_hook((void*)2,145,130,0);
+     if(((SBTestWidget*)view->panel)->rect.left!=px+45||((SBTestWidget*)view->panel)->rect.top!=py+30)return 22;
+     mouse_move_hook((void*)2,180,180,0);if(((SBTestWidget*)view->panel)->rect.left!=px+45)return 23;}
+    test_mouse_focus=view->opener;if(!mouse_press_hook((void*)2,0,0,0)||view->model.visible)return 2;mouse_press_hook((void*)2,0,0,0);if(!view->model.visible)return 13;
     stats_window_update_hook(window);if(!view->graph_ready||!test_canvas_created)return 3;
     test_mouse_focus=view->buttons[4];mouse_press_hook((void*)2,0,0,0);if(!find_ally((void*)3)||find_ally((void*)3)->element!=4)return 10;stats_window_update_hook(window);if(view->model.affinity.selected!=4)return 4;
     {SBCharacterRecord* r=sb_character_observe(&persistence.characters,(void*)9,42,7,0,4);if(!r)return 7;r->affinity.xp[0]=13800;stats_window_update_hook(window);
      test_mouse_focus=view->mode_second;mouse_press_hook((void*)2,0,0,0);if(!view->second_mode)return 8;
      test_mouse_focus=view->buttons[2];mouse_press_hook((void*)2,0,0,0);if(!find_ally((void*)3)||find_ally((void*)3)->secondary!=2)return 11;stats_window_update_hook(window);if(view->model.affinity.secondary!=2)return 9;}
     stats_save_hook(&stats,&data);if(!data.present||(data.value[0]&7)!=4||((data.value[0]>>16)&7)!=2)return 5;
-    stats_window_clear_hook(window);if(ui_find(window)>=0)return 6;set_ally((void*)9,0,0,0,0,0,0);
+    *(void**)(window+0xd0)=(void*)10;test_handle_values[5]=43;stats_window_update_hook(window);if(!view->model.visible||view->model.character!=(void*)10||view->model.index!=43)return 14;
+    if(((SBTestWidget*)view->panel)->rect.left!=stats_window_width(window)+12+45||((SBTestWidget*)view->panel)->rect.top!=40)return 24;
+    set_ally((void*)10,(void*)4,1,0,0,0,1);test_mouse_focus=view->buttons[3];mouse_press_hook((void*)2,0,0,0);if(!find_ally((void*)4)||find_ally((void*)4)->element!=3||!find_ally((void*)3)||find_ally((void*)3)->element!=4)return 19;
+    test_mouse_focus=view->close;mouse_press_hook((void*)2,0,0,0);if(view->model.visible||ui_panel_preference)return 15;
+    *(void**)(window+0xd0)=(void*)9;test_handle_values[5]=42;stats_window_update_hook(window);if(view->model.visible||view->model.character!=(void*)9)return 16;
+    test_mouse_focus=view->opener;mouse_press_hook((void*)2,0,0,0);if(!view->model.visible)return 17;
+    ui_scale_tenths=15;sb_ui_view_set_scale(15);stats_window_update_hook(window);if(!view->model.visible||view->model.character!=(void*)9||((SBTestWidget*)view->panel)->rect.width!=795||((SBTestWidget*)view->effect)->font_height!=30)return 18;ui_scale_tenths=10;sb_ui_view_set_scale(10);
+    if(((SBTestWidget*)view->panel)->rect.left!=stats_window_width(window)+18+45||((SBTestWidget*)view->panel)->rect.top!=45)return 25;
+    ui_test_native_x=0.87f;ui_test_native_y=0.97f;stats_window_update_hook(window);if(!view->model.visible||((SBTestWidget*)view->panel)->rect.width!=461||((SBTestWidget*)view->panel)->rect.height!=435||((SBTestWidget*)view->effect)->font_height!=20)return 20;
+    ui_test_native_x=1.0f;ui_test_native_y=1.0f;stats_window_update_hook(window);if(((SBTestWidget*)view->panel)->rect.width!=530)return 21;
+    stats_window_clear_hook(window);if(ui_find(window)>=0)return 6;set_ally((void*)9,0,0,0,0,0,0);set_ally((void*)10,0,0,0,0,0,0);
     active=0;return 0;
 }
 #endif

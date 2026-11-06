@@ -4,7 +4,7 @@ system SB_Prototype_WaterBlade
     technique WaterSplashes
     {
         visual_particle_quota 35
-        material Footsplash[A]
+        material EE_WaterNatural_Drop
         renderer Billboard
         {
             billboard_type oriented_self
@@ -32,7 +32,7 @@ system SB_Prototype_WaterBlade
             particle_width dyn_random
             {
                 min 0.4
-                max 0.8
+                max 1.25
             }
             particle_height dyn_random
             {
@@ -52,7 +52,7 @@ system SB_Prototype_WaterBlade
         affector Colour
         {
             time_colour 0 0.3 0.65 1 0
-            time_colour 0.18 0.5 0.8 1 0.6
+            time_colour 0.18 0.65 0.85 0.9 0.8
             time_colour 1 0.12 0.45 1 0
         }
     }
@@ -60,7 +60,7 @@ system SB_Prototype_WaterBlade
     technique FlowingWater
     {
         visual_particle_quota 64
-        material Footsplash[A]
+        material EE_WaterNatural_Foam
         renderer Billboard
         {
             billboard_type oriented_self
@@ -68,7 +68,7 @@ system SB_Prototype_WaterBlade
         }
         emitter Box Rivulets
         {
-            emission_rate 28
+            emission_rate 36
             position 0 5 0
             box_width 0.5
             box_height 8.5
@@ -87,13 +87,13 @@ system SB_Prototype_WaterBlade
             }
             particle_width dyn_random
             {
-                min 0.7
-                max 1.1
+                min 0.8
+                max 1.4
             }
             particle_height dyn_random
             {
-                min 1.0
-                max 1.8
+                min 1.3
+                max 2.2
             }
         }
         affector TextureRotator
@@ -108,8 +108,47 @@ system SB_Prototype_WaterBlade
         affector Colour
         {
             time_colour 0 0.15 0.5 1 0
-            time_colour 0.2 0.3 0.7 1 0.6
+            time_colour 0.2 0.68 0.86 0.9 0.9
             time_colour 1 0.12 0.45 1 0
+        }
+    }
+
+    technique WaveEdges
+    {
+        visual_particle_quota 18
+        material EE_WaterNatural_Wave
+        renderer Billboard
+        {
+            billboard_type oriented_self
+            billboard_rotation_type vertex
+        }
+        emitter Box Crests
+        {
+            emission_rate 5
+            position 0 5 0
+            box_width 0.2
+            box_height 7
+            box_depth 0.2
+            direction 0 1 0
+            angle 8
+            time_to_live 1.2
+            velocity 0.4
+            particle_width dyn_random
+            {
+                min 1.0
+                max 1.5
+            }
+            particle_height dyn_random
+            {
+                min 1.8
+                max 2.8
+            }
+        }
+        affector Colour
+        {
+            time_colour 0 0.7 0.9 1 0
+            time_colour 0.3 0.75 0.92 1 0.5
+            time_colour 1 0.45 0.75 0.85 0
         }
     }
 }

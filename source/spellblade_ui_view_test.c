@@ -27,7 +27,7 @@ __declspec(dllexport) int sb_run_ui_view_tests(void)
     if(!same(m.milestone,"SUB 75%"))return 17;sb_ui_view_click(&view,&api,view.mode_second);if(!view.second_mode)return 14;if(sb_ui_view_click(&view,&api,view.buttons[2])!=9)return 15;
     a.secondary=2;sb_ui_view_sync(&view,&api,(void*)101,(void*)102,1,2,&a,1);if(!same(m.effect,"Armour penetration +11.3%")||!same(m.detail,"Attack / bolt speed +3.8%")||!same(m.title,"MAIN  Ice     SUB  Lightning"))return 16;
     sb_ui_view_click(&view,&api,view.mode_main);sb_ui_view_sync(&view,&api,(void*)101,(void*)102,1,2,&a,1);if(!same(m.title,"MAIN  Ice     SUB  Lightning"))return 18;
-    sb_ui_view_sync(&view,&api,(void*)101,(void*)103,3,4,&a,1);if(view.model.visible)return 7;
+    sb_ui_view_sync(&view,&api,(void*)101,(void*)103,3,4,&a,1);if(!view.model.visible||view.model.character!=(void*)103)return 7;
     sb_ui_view_dispose(&view,&api);if(m.destroyed!=2||view.parent)return 8;
     return 0;
 }

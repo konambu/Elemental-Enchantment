@@ -1,0 +1,33 @@
+material EE_WaterNatural_Drop
+{
+ technique { pass {
+  vertex_program_ref Basic_Coloured_Texture_VP {}
+  fragment_program_ref Basic_Texture_FP {}
+  lighting off
+  scene_blend alpha_blend
+  depth_write off
+  texture_unit { texture EE_WaterNatural_Drop.png }
+ } }
+}
+material EE_WaterNatural_Foam
+{
+ technique { pass {
+  vertex_program_ref Basic_Coloured_Texture_VP {}
+  fragment_program_ref Basic_Texture_FP {}
+  lighting off
+  scene_blend add
+  depth_write off
+  texture_unit { texture WadingFoam_Part02.png }
+ } }
+}
+material EE_WaterNatural_Wave
+{
+ technique { pass {
+  vertex_program_ref Basic_Coloured_Texture_VP {}
+  fragment_program_ref Basic_Texture_FP {}
+  lighting off
+  scene_blend alpha_blend
+  depth_write off
+  texture_unit { texture EE_WaterNatural_Wave.png }
+ } }
+}
