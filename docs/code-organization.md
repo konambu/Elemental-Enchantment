@@ -12,6 +12,8 @@ The standalone `elemental_*.c` modules contain affinity rules, character state, 
 
 `elemental_affinity.c` owns the shared XP thresholds, level calculation, secondary-element strength, and aptitude ring order. UI and radar code consume those definitions so their display stays aligned with the gameplay rules.
 
+`EEAffinity` stores one shared XP value in memory. The version 3 decoder still reads all five historical XP values and migrates the highest; version 4's three-integer save format is unchanged.
+
 `elemental_game_string.c` owns the shared Kenshi/MyGUI string layout and initialization. It copies short strings into inline storage and borrows longer strings; callers must keep the longer text alive while the game uses it.
 
 Keep engine-specific hook installation in the runtime coordinator unless a module boundary can be given a small explicit interface.

@@ -1118,7 +1118,7 @@ static int combat_affinity_locked(void *character, void *stats, EEAffinity *out)
         l = (unsigned int)p->level;
         if (!ee_affinity_create(out, 0, (unsigned int)p->primary))
             return 0;
-        out->xp[0] = (unsigned short)ee_affinity_xp_for_level(l);
+        out->total_xp = (unsigned short)ee_affinity_xp_for_level(l);
         out->secondary = (unsigned int)p->secondary;
     }
     return out->selected != 0;

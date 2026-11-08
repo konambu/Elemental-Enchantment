@@ -11,6 +11,7 @@ CHECKS = (
     "ee_run_game_string_tests",
     "ee_run_persistence_tests",
     "ee_run_affinity_threshold_tests",
+    "ee_run_affinity_migration_tests",
     "ee_run_characters_tests",
     "ee_test_new_aptitudes",
     "ee_run_ui_model_tests",

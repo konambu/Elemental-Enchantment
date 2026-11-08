@@ -30,14 +30,12 @@ static void aptitude(EEAffinity *s, unsigned int primary, int all) {
 }
 
 int ee_affinity_create(EEAffinity *s, unsigned int seed, unsigned int initial_element) {
-    int i;
     if (!s || initial_element > 5)
         return 0;
     s->selected = initial_element;
     s->secondary = 0;
     s->xp_fraction = 0;
-    for (i = 0; i < 5; ++i)
-        s->xp[i] = 0;
+    s->total_xp = 0;
     aptitude(s, mix(seed ^ 0x6d2b79f5u) % 5u, mix(seed ^ 0xa511e9b3u) % 100u == 0);
     return 1;
 }
@@ -70,7 +68,7 @@ unsigned int ee_affinity_level(const EEAffinity *s) {
     unsigned int lo = 0, hi = EE_AFFINITY_MAX_LEVEL, total;
     if (!s)
         return 0;
-    total = s->xp[0];
+    total = s->total_xp;
     while (lo < hi) {
         unsigned int mid = (lo + hi + 1u) / 2u;
         if (total >= ee_affinity_xp_for_level(mid))
@@ -89,13 +87,13 @@ int ee_affinity_award_hit_rate_scaled(EEAffinity *s, int all_aptitudes, unsigned
     amount =
         (4u * tenths * (all_aptitudes ? 100u : (unsigned int)s->rates[s->selected - 1])) / 10u +
         s->xp_fraction;
-    total = (unsigned int)s->xp[0] + amount / 100u;
+    total = (unsigned int)s->total_xp + amount / 100u;
     s->xp_fraction = amount % 100u;
     if (total >= EE_AFFINITY_MAX_XP) {
         total = EE_AFFINITY_MAX_XP;
         s->xp_fraction = 0;
     }
-    s->xp[0] = (unsigned short)total;
+    s->total_xp = (unsigned short)total;
     return 1;
 }
 int ee_affinity_award_hit_rate(EEAffinity *s, int all_aptitudes) {
@@ -189,7 +187,7 @@ float ee_affinity_attack_speed_scaled(const EEAffinity *s, float speed, float mu
 int ee_affinity_encode(const EEAffinity *s, int out[3]) {
     unsigned int code = 5;
     int i, j, all = 1;
-    if (!s || !out || s->selected > 5 || s->secondary > 5 || s->xp[0] > EE_AFFINITY_MAX_XP ||
+    if (!s || !out || s->selected > 5 || s->secondary > 5 || s->total_xp > EE_AFFINITY_MAX_XP ||
         s->xp_fraction >= 100u || s->secondary == s->selected && s->secondary ||
         s->secondary && (!s->selected || ee_affinity_level(s) < 50))
         return 0;
@@ -213,7 +211,7 @@ int ee_affinity_encode(const EEAffinity *s, int out[3]) {
             return 0;
     }
     out[0] = (int)((4u << 8) | (code << 3) | s->selected | (s->secondary << 16));
-    out[1] = (int)s->xp[0];
+    out[1] = (int)s->total_xp;
     out[2] = (int)s->xp_fraction;
     return 1;
 }
@@ -235,9 +233,7 @@ int ee_affinity_decode(EEAffinity *s, const int in[3]) {
             packed > EE_AFFINITY_MAX_XP || tmp.xp_fraction >= 100u)
             return 0;
         aptitude(&tmp, code == 5 ? 0 : code, code == 5);
-        tmp.xp[0] = (unsigned short)packed;
-        for (i = 1; i < 5; ++i)
-            tmp.xp[i] = 0;
+        tmp.total_xp = (unsigned short)packed;
         if (tmp.secondary &&
             (!tmp.selected || tmp.selected == tmp.secondary || ee_affinity_level(&tmp) < 50))
             return 0;
@@ -246,24 +242,23 @@ int ee_affinity_decode(EEAffinity *s, const int in[3]) {
     }
     if (version == 3) {
         unsigned int code = (meta & 255u) >> 3, highest = 0;
+        unsigned short old_xp[5];
         tmp.selected = meta & 7u;
         if (code > 5 || tmp.selected > 5)
             return 0;
         aptitude(&tmp, code == 5 ? 0 : code, code == 5);
-        tmp.xp[0] = (unsigned short)(meta >> 16);
-        tmp.xp[1] = (unsigned short)packed;
-        tmp.xp[2] = (unsigned short)(packed >> 16);
-        tmp.xp[3] = (unsigned short)(unsigned int)in[2];
-        tmp.xp[4] = (unsigned short)((unsigned int)in[2] >> 16);
+        old_xp[0] = (unsigned short)(meta >> 16);
+        old_xp[1] = (unsigned short)packed;
+        old_xp[2] = (unsigned short)(packed >> 16);
+        old_xp[3] = (unsigned short)(unsigned int)in[2];
+        old_xp[4] = (unsigned short)((unsigned int)in[2] >> 16);
         for (i = 0; i < 5; ++i) {
-            if (tmp.xp[i] > EE_AFFINITY_MAX_XP)
+            if (old_xp[i] > EE_AFFINITY_MAX_XP)
                 return 0;
-            if (tmp.xp[i] > highest)
-                highest = tmp.xp[i];
+            if (old_xp[i] > highest)
+                highest = old_xp[i];
         }
-        tmp.xp[0] = (unsigned short)highest;
-        for (i = 1; i < 5; ++i)
-            tmp.xp[i] = 0;
+        tmp.total_xp = (unsigned short)highest;
         tmp.secondary = 0;
         tmp.xp_fraction = 0;
         *s = tmp;
@@ -280,8 +275,7 @@ int ee_affinity_decode(EEAffinity *s, const int in[3]) {
         tmp.rates[i] = (unsigned char)rate;
     }
     tmp.rates[4] = (unsigned char)in[2];
-    for (i = 0; i < 5; ++i)
-        tmp.xp[i] = 0;
+    tmp.total_xp = 0;
     tmp.secondary = 0;
     tmp.xp_fraction = 0;
     {

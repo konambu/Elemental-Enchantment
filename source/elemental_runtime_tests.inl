@@ -152,51 +152,51 @@ __declspec(dllexport) int probeTestXPScaling(void) {
         return 1;
     a = base;
     a.xp_fraction = 37;
-    if (!ee_affinity_award_hit_rate_scaled(&a, 0, 0) || a.xp[0] || a.xp_fraction != 37)
+    if (!ee_affinity_award_hit_rate_scaled(&a, 0, 0) || a.total_xp || a.xp_fraction != 37)
         return 2;
     a = base;
     for (i = 0; i < 25; ++i)
         ee_affinity_award_hit_rate_scaled(&a, 0, 5);
-    if (a.xp[0] != 30 || a.xp_fraction)
+    if (a.total_xp != 30 || a.xp_fraction)
         return 3;
     a = base;
     for (i = 0; i < 25; ++i)
         ee_affinity_award_hit_rate_scaled(&a, 0, 10);
-    if (a.xp[0] != 60 || a.xp_fraction)
+    if (a.total_xp != 60 || a.xp_fraction)
         return 4;
     a = base;
     for (i = 0; i < 25; ++i)
         ee_affinity_award_hit_rate_scaled(&a, 0, 20);
-    if (a.xp[0] != 120 || a.xp_fraction)
+    if (a.total_xp != 120 || a.xp_fraction)
         return 5;
     a = base;
     for (i = 0; i < 25; ++i)
         ee_affinity_award_hit_rate_scaled(&a, 1, 20);
-    if (a.xp[0] != 200 || a.rates[0] != 60)
+    if (a.total_xp != 200 || a.rates[0] != 60)
         return 6;
     a = base;
     ee_affinity_award_hit_rate_scaled(&a, 0, 5);
-    if (a.xp[0] != 1 || a.xp_fraction != 20 || !ee_affinity_encode(&a, record) ||
-        !ee_affinity_decode(&b, record) || b.xp[0] != a.xp[0] || b.xp_fraction != a.xp_fraction)
+    if (a.total_xp != 1 || a.xp_fraction != 20 || !ee_affinity_encode(&a, record) ||
+        !ee_affinity_decode(&b, record) || b.total_xp != a.total_xp || b.xp_fraction != a.xp_fraction)
         return 7;
     a = base;
-    a.xp[0] = 47599;
+    a.total_xp = 47599;
     ee_affinity_award_hit_rate_scaled(&a, 1, 200);
-    if (a.xp[0] != 47600 || a.xp_fraction)
+    if (a.total_xp != 47600 || a.xp_fraction)
         return 8;
     a = base;
     ee_affinity_select(&a, 0);
-    if (ee_affinity_award_hit_rate_scaled(&a, 1, 200) || a.xp[0])
+    if (ee_affinity_award_hit_rate_scaled(&a, 1, 200) || a.total_xp)
         return 9;
     a = base;
     for (i = 0; i < 25; ++i)
         ee_affinity_award_hit_rate_scaled(&a, 0, 1);
-    if (a.xp[0] != 6 || a.xp_fraction)
+    if (a.total_xp != 6 || a.xp_fraction)
         return 10;
     a = base;
     for (i = 0; i < 25; ++i)
         ee_affinity_award_hit_rate_scaled(&a, 0, 200);
-    if (a.xp[0] != 1200 || a.xp_fraction)
+    if (a.total_xp != 1200 || a.xp_fraction)
         return 11;
     return 0;
 }
@@ -207,7 +207,7 @@ __declspec(dllexport) int probeTestEffectMultiplier(void) {
     for (i = 1; i <= 5; ++i) {
         if (!ee_affinity_create(&a, 42, (unsigned int)i))
             return 1;
-        a.xp[0] = 47600;
+        a.total_xp = 47600;
         zero = normal = five = original;
         if (ee_affinity_damage_scaled(&a, &zero, 0))
             return 2;
@@ -242,7 +242,7 @@ __declspec(dllexport) int probeTestEffectMultiplier(void) {
         }
     }
     ee_affinity_create(&a, 42, 3);
-    a.xp[0] = 47600;
+    a.total_xp = 47600;
     if (!ee_affinity_select_secondary(&a, 2))
         return 7;
     if (ee_affinity_attack_speed_scaled(&a, 1, 5) < 1.687f ||
@@ -251,8 +251,8 @@ __declspec(dllexport) int probeTestEffectMultiplier(void) {
     if (ee_affinity_attack_speed_scaled(&a, 1, 0.5f) < 1.068f ||
         ee_affinity_attack_speed_scaled(&a, 1, 0.5f) > 1.069f)
         return 10;
-    a.xp[0] = 0;
-    if (!ee_affinity_award_hit(&a) || !a.xp[0])
+    a.total_xp = 0;
+    if (!ee_affinity_award_hit(&a) || !a.total_xp)
         return 9;
     if (parse_multiplier_tenths("0.5", 50) != 5 || parse_multiplier_tenths("1", 50) != 10 ||
         parse_multiplier_tenths("1.5", 50) != 15 || parse_multiplier_tenths("5", 50) != 50 ||
@@ -460,27 +460,27 @@ __declspec(dllexport) int probeTestHitXP(void) {
     character_hit_hook((void *)8, 0, 0, (void *)9, 0, 0);
     test_hit_result = 5;
     character_hit_hook((void *)8, 0, 0, (void *)9, 0, 0);
-    if (r->affinity.xp[0])
+    if (r->affinity.total_xp)
         return 2;
     test_hit_result = 2;
     for (i = 0; i < 10; ++i)
         character_hit_hook((void *)8, 0, 0, (void *)9, 0, 0);
-    old = r->affinity.xp[0];
+    old = r->affinity.total_xp;
     if (!old)
         return 3;
     character_hit_hook((void *)8, 0, &d, (void *)9, 0, 0);
     if (test_seen_cut <= 10.0f || d.cut != 10.0f)
         return 5;
-    old = r->affinity.xp[0];
+    old = r->affinity.total_xp;
     test_weapon_kind = 6;
     test_seen_cut = 0;
     character_hit_hook((void *)8, 0, &d, (void *)9, 0, 0);
-    if (test_seen_cut != 10.0f || d.cut != 10.0f || r->affinity.xp[0] != old)
+    if (test_seen_cut != 10.0f || d.cut != 10.0f || r->affinity.total_xp != old)
         return 6;
     test_weapon_kind = -1;
     test_player_flag = 0;
     character_hit_hook((void *)8, 0, 0, (void *)9, 0, 0);
-    if (r->affinity.xp[0] != old)
+    if (r->affinity.total_xp != old)
         return 4;
     active = 0;
     return 0;
@@ -528,15 +528,15 @@ __declspec(dllexport) int probeTestXPScalingHitHooks(void) {
         return 1;
     xp_tenths = 0;
     character_hit_hook((void *)8, 0, &d, (void *)9, 0, 0);
-    if (r->affinity.xp[0] || test_seen_cut <= 10.0f)
+    if (r->affinity.total_xp || test_seen_cut <= 10.0f)
         fail = 2;
     xp_tenths = 20;
     character_hit_hook((void *)8, 0, &d, (void *)9, 0, 0);
-    if (r->affinity.xp[0] != 8)
+    if (r->affinity.total_xp != 8)
         fail = 3;
-    old = r->affinity.xp[0];
+    old = r->affinity.total_xp;
     crossbow_wound_hook((void *)8, 0, 0, &d, 0, (void *)9, 0, (void *)7);
-    if (r->affinity.xp[0] != old + 8)
+    if (r->affinity.total_xp != old + 8)
         fail = 4;
     xp_tenths = 10;
     all_aptitudes = 0;
@@ -563,7 +563,7 @@ __declspec(dllexport) int probeTestMultiplierHitHooks(void) {
     r = ee_persistence_bind(&persistence, (void *)123, (void *)9, 42, 7, 99, 4);
     if (!r)
         return 1;
-    r->affinity.xp[0] = 47600;
+    r->affinity.total_xp = 47600;
     effect_multiplier = 0;
     character_hit_hook((void *)8, 0, &d, (void *)9, 0, 0);
     if (test_seen_cut != 30)
@@ -611,19 +611,19 @@ __declspec(dllexport) int probeTestCrossbowWound(void) {
     r = ee_persistence_bind(&persistence, (void *)123, (void *)9, 42, 7, 99, 1);
     if (!r)
         return 1;
-    r->affinity.xp[0] = 0;
+    r->affinity.total_xp = 0;
     crossbow_wound_hook((void *)8, 0, 0, &d, 0, (void *)9, 0, (void *)7);
     if (test_wound_seen_blunt < 4.99f || test_wound_seen_blunt > 5.01f ||
-        test_wound_seen_pierce != 100 || d.blunt != 0 || r->affinity.xp[0] != 4)
+        test_wound_seen_pierce != 100 || d.blunt != 0 || r->affinity.total_xp != 4)
         return 2;
-    old = r->affinity.xp[0];
+    old = r->affinity.total_xp;
     test_player_flag = 0;
     crossbow_wound_hook((void *)8, 0, 0, &d, 0, (void *)9, 0, (void *)7);
-    if (test_wound_seen_blunt != 0 || r->affinity.xp[0] != old)
+    if (test_wound_seen_blunt != 0 || r->affinity.total_xp != old)
         return 3;
     test_player_flag = 1;
     crossbow_wound_hook((void *)8, 0, 0, &d, 0, (void *)9, 0, 0);
-    if (test_wound_seen_blunt != 0 || r->affinity.xp[0] != old)
+    if (test_wound_seen_blunt != 0 || r->affinity.total_xp != old)
         return 4;
     active = 0;
     all_aptitudes = 0;
@@ -756,7 +756,7 @@ __declspec(dllexport) int probeTestWindReload(void) {
     float rate;
     if (!ee_affinity_create(&a, 1, 3))
         return 1;
-    a.xp[0] = 47600;
+    a.total_xp = 47600;
     rate = ee_affinity_combat_speed(&a, 1.0f);
     if (rate < 1.099f || rate > 1.101f || cb_reload_adjust(3.0f, .1f, rate) > 2.991f ||
         cb_reload_adjust(3.0f, .1f, rate) < 2.989f)
@@ -792,7 +792,7 @@ __declspec(dllexport) int probeTestWindReloadIntegration(void) {
     r = ee_persistence_bind(&persistence, (void *)123, (void *)9, 42, 7, 99, 3);
     if (!r)
         return 1;
-    r->affinity.xp[0] = 47600;
+    r->affinity.total_xp = 47600;
     tracked_actors[0].character = (void *)9;
     tracked_actors[0].element = 3;
     *(void **)(ranged + 0x68) = (void *)9;
@@ -848,7 +848,7 @@ __declspec(dllexport) int probeTestCrossbowSpeed(void) {
     r = ee_persistence_bind(&persistence, (void *)123, (void *)9, 42, 7, 99, 3);
     if (!r)
         return 1;
-    r->affinity.xp[0] = 47600;
+    r->affinity.total_xp = 47600;
     tracked_actors[0].character = (void *)9;
     tracked_actors[0].element = 3;
     *(unsigned *)(test_cb_shot_bolt + 0x34) = 42;
@@ -985,7 +985,7 @@ __declspec(dllexport) int probeTestWindSpeed(void) {
     x = attack_speed_hook(&stats);
     if (x < 1.019f || x > 1.021f)
         return 2;
-    r->affinity.xp[0] = 47600;
+    r->affinity.total_xp = 47600;
     x = block_speed_hook(&stats);
     if (x < 1.099f || x > 1.101f)
         return 3;
@@ -997,7 +997,7 @@ __declspec(dllexport) int probeTestWindSpeed(void) {
     if (attack_speed_hook(&stats) != 1.0f)
         return 4;
     r->affinity.selected = 2;
-    r->affinity.xp[0] = 47600;
+    r->affinity.total_xp = 47600;
     x = attack_speed_hook(&stats);
     if (x < 1.049f || x > 1.051f || block_speed_hook(&stats) != 1.0f)
         return 6;
@@ -1186,12 +1186,12 @@ __declspec(dllexport) int probeTestAptitudeOverride(void) {
     for (i = 0; i < 25; ++i)
         if (!ee_affinity_award_hit_rate(&a, 1))
             return 2;
-    if (a.xp[0] != 100 || a.rates[0] != 60 || !ee_affinity_encode(&a, record) ||
+    if (a.total_xp != 100 || a.rates[0] != 60 || !ee_affinity_encode(&a, record) ||
         !ee_affinity_decode(&b, record) || b.rates[0] != 60)
         return 3;
     for (i = 0; i < 25; ++i)
         ee_affinity_award_hit_rate(&b, 0);
-    return b.xp[0] == 160 ? 0 : 4;
+    return b.total_xp == 160 ? 0 : 4;
 }
 __declspec(dllexport) int probeTestNewGameAptitude(void) {
     static EECharacters chars;
@@ -1895,7 +1895,7 @@ __declspec(dllexport) int probeTestUIHooks(void) {
             ee_character_observe(&persistence.characters, (void *)9, 42, 7, 0, 4);
         if (!r)
             return 7;
-        r->affinity.xp[0] = 13800;
+        r->affinity.total_xp = 13800;
         stats_window_update_hook(window);
         test_mouse_focus = view->mode_second;
         mouse_press_hook((void *)2, 0, 0, 0);

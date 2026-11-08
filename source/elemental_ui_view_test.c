@@ -81,7 +81,7 @@ __declspec(dllexport) int ee_run_ui_view_tests(void) {
     if (!ee_ui_view_build(&view, &api, (void *)100, 700, 500) || m.created != 35 ||
         m.opener_y != 260)
         return 1;
-    a.xp[0] = 40;
+    a.total_xp = 40;
     ee_ui_view_sync(&view, &api, (void *)101, (void *)102, 1, 2, &a, 1);
     if (view.model.visible || m.radars)
         return 2;
@@ -111,7 +111,7 @@ __declspec(dllexport) int ee_run_ui_view_tests(void) {
         if (expected[j] || m.effect[j])
             return 10;
     }
-    a.xp[0] = a.xp[1] = a.xp[4] = 47600;
+    a.total_xp = 47600;
     a.selected = 1;
     ee_ui_view_sync(&view, &api, (void *)101, (void *)102, 1, 2, &a, 1);
     if (!same(m.effect, "Blunt damage +15.0%") || !same(m.status, "ELEMENTAL   100") ||
@@ -167,7 +167,7 @@ ee_test_locale_render(const char *id, int which, unsigned int element, unsigned 
     a.selected = element;
     if (level > 100)
         level = 100;
-    a.xp[0] = (unsigned short)(4u * (20u * level + level * (level - 1u)));
+    a.total_xp = (unsigned short)(4u * (20u * level + level * (level - 1u)));
     for (i = 0; i < 5; ++i)
         a.rates[i] = 100;
     ee_ui_view_init(&view);

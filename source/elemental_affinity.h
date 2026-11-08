@@ -14,7 +14,7 @@ extern const unsigned char ee_affinity_ring_order[EE_AFFINITY_COUNT];
 typedef struct EEAffinity {
     unsigned int selected;                  /* 0 = off, 1..5 = element */
     unsigned char rates[EE_AFFINITY_COUNT]; /* 0..100 */
-    unsigned short xp[EE_AFFINITY_COUNT];   /* total XP in quarter-point units */
+    unsigned short total_xp;                /* total XP in quarter-point units */
     unsigned int secondary;                 /* 0 = off, 1..5 = element */
     unsigned int xp_fraction;               /* hundredths of one XP unit */
 } EEAffinity;

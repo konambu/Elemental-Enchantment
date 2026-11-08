@@ -228,7 +228,7 @@ static unsigned int xp_progress_percent(const EEAffinity *a) {
     unsigned int level, xp, base, need;
     if (!a->selected || a->selected > 5)
         return 0;
-    xp = a->xp[0];
+    xp = a->total_xp;
     level = ee_affinity_level(a);
     if (level == EE_AFFINITY_MAX_LEVEL)
         return 100;
@@ -304,7 +304,7 @@ __declspec(dllexport) int probeTestHalfEffectDisplay(void) {
     const char *detail;
     ee_locale_set("en_GB");
     ee_affinity_create(&a, 1, 1);
-    a.xp[0] = EE_AFFINITY_MAX_XP;
+    a.total_xp = EE_AFFINITY_MAX_XP;
     ee_ui_view_set_effect_multiplier(0.5f);
     effect_text(out, detail_out, &detail, &a, 100);
     if (!ui_test_has(out, "7.5%"))
@@ -318,7 +318,7 @@ __declspec(dllexport) int probeTestHalfEffectDisplay(void) {
     effect_text(out, detail_out, &detail, &a, 100);
     if (!ui_test_has(out, "0.25"))
         return 2;
-    a.xp[0] = (unsigned short)ee_affinity_xp_for_level(2);
+    a.total_xp = (unsigned short)ee_affinity_xp_for_level(2);
     ee_ui_view_set_effect_multiplier(5.0f);
     effect_text(out, detail_out, &detail, &a, 100);
     if (!ui_test_has(out, "0.54") || !ui_test_has(detail, "10.8%"))

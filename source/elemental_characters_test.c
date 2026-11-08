@@ -62,7 +62,7 @@ __declspec(dllexport) int ee_test_new_aptitudes(void) {
         return 5;
     for (i = 0; i < 5; ++i)
         saved[i] = r->affinity.rates[i];
-    r->affinity.xp[0] = 1234;
+    r->affinity.total_xp = 1234;
     if (ee_character_save(&chars, (void *)1, 10, 20, &b) != EE_SAVE_OK)
         return 6;
     ee_character_forget(&chars, (void *)1);
@@ -70,7 +70,7 @@ __declspec(dllexport) int ee_test_new_aptitudes(void) {
         return 7;
     i = seed_calls;
     r = ee_character_observe(&chars, (void *)1, 10, 20, 999, 5);
-    if (!r || r->affinity.selected != 0 || r->affinity.xp[0] != 1234 || seed_calls != i)
+    if (!r || r->affinity.selected != 0 || r->affinity.total_xp != 1234 || seed_calls != i)
         return 8;
     for (j = 0; j < 5; ++j)
         if (r->affinity.rates[j] != saved[j])
