@@ -1,0 +1,47 @@
+{
+  "en_GB": {
+    "armour": "Armour penetration",
+    "blunt": "Blunt damage",
+    "cut": "Cutting damage"
+  },
+  "ja_JP": {
+    "armour": "\u9632\u5177\u8cab\u901a",
+    "blunt": "\u6253\u6483\u30c0\u30e1\u30fc\u30b8",
+    "cut": "\u5207\u65ad\u30c0\u30e1\u30fc\u30b8"
+  },
+  "ko_KR": {
+    "armour": "\ubc29\uc5b4\uad6c \uad00\ud1b5\ub825",
+    "blunt": "\ud0c0\uaca9 \ud53c\ud574",
+    "cut": "\uc808\ub2e8 \ud53c\ud574"
+  },
+  "zh_CN": {
+    "armour": "\u7a7f\u7532",
+    "blunt": "\u949d\u5668\u4f24\u5bb3",
+    "cut": "\u5207\u5272\u4f24\u5bb3"
+  },
+  "es_ES": {
+    "armour": "Penetraci\u00f3n de la Armadura",
+    "blunt": "Da\u00f1o contundente",
+    "cut": "Da\u00f1o por cortes"
+  },
+  "pt_BR": {
+    "armour": "Perfura\u00e7\u00e3o de armadura",
+    "blunt": "Dano contundente",
+    "cut": "Dano de corte"
+  },
+  "de_DE": {
+    "armour": "R\u00fcstungsdurchdringung",
+    "blunt": "Stumpfschaden",
+    "cut": "Schnittschaden"
+  },
+  "ru_RU": {
+    "armour": "\u041f\u0440\u043e\u0431\u0438\u0442\u0438\u0435 \u0434\u043e\u0441\u043f\u0435\u0445\u0430",
+    "blunt": "\u0414\u0440\u043e\u0431\u044f\u0449\u0438\u0439 \u0443\u0440\u043e\u043d",
+    "cut": "\u0420\u0435\u0436\u0443\u0449\u0438\u0439 \u0443\u0440\u043e\u043d"
+  },
+  "fr_FR": {
+    "armour": "P\u00e9n\u00e9tration armure",
+    "blunt": "Dommages par arme contondante",
+    "cut": "Dommages par arme tranchante"
+  }
+}

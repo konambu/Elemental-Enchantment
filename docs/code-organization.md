@@ -16,7 +16,7 @@ The standalone `elemental_*.c` modules contain affinity rules, character state, 
 
 `elemental_game_string.c` owns the shared Kenshi/MyGUI string layout and initialization. It copies short strings into inline storage and borrows longer strings; callers must keep the longer text alive while the game uses it.
 
-UI translations are stored in `translations.json` and compiled from `elemental_localization.c`. There is currently no checked-in generator for the latter; when editing translations, update both and run `python tools/check_localization.py`. The final three combat terms in each compiled row come from Kenshi's translation catalogs and are not in the JSON. MCM text uses `mcm-translations.json` and the checked-in `generate_mcm_strings.py` generator. The native check runner verifies that both compiled tables match their editable inputs.
+UI translations are stored in `translations.json`; the three existing Kenshi combat terms per language are in `game-terms.json`. Run `python source/generate_localization.py` after editing either file to regenerate `elemental_localization.c`. MCM text uses `mcm-translations.json` and `generate_mcm_strings.py`. The native check runner verifies that both compiled tables match their editable inputs.
 
 Keep engine-specific hook installation in the runtime coordinator unless a module boundary can be given a small explicit interface.
 

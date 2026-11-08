@@ -21,6 +21,9 @@ Install Doxygen, then run `doxygen .\Doxyfile` from the repository root. Generat
 # Only needed after changing MCM translations:
 python .\source\generate_mcm_strings.py
 
+# Only needed after changing UI translations or game terms:
+python .\source\generate_localization.py
+
 # Build the normal plugin DLL:
 python .\build.py
 if ($LASTEXITCODE -ne 0) { throw 'Plugin build failed; do not stage an older DLL.' }
