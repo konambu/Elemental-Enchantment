@@ -59,6 +59,9 @@ def main():
     errors = []
     available_materials = local_materials | game_materials
     available_files = local_files | game_files
+    for kind, element in ((-1, 1), (4, 1), (0, 0), (0, 6)):
+        if lookup(kind, element):
+            errors.append(f"Invalid descriptor accepted for kind={kind}, element={element}")
     for name in sorted(material_refs):
         should_check = args.game_data is not None or name.startswith(("EE_", "SB_"))
         if should_check and name not in available_materials:

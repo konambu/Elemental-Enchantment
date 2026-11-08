@@ -2,8 +2,7 @@
 #define EE_EFFECT_TEMPLATES_H
 
 /** @file elemental_effect_templates.h
- * @brief Maps element IDs to the particle resources used by
- * each visual.
+ * @brief Maps element IDs to the particle resources used by each visual.
  */
 
 /** Visual context passed to ee_effect_template(). */
@@ -23,10 +22,8 @@ typedef struct EEEffectTemplate {
 
 /**
  * @brief Find the resource used for one element and visual context.
- * @param kind One of
- * EE_TEMPLATE_HAND, BLADE, IMPACT, or CROSSBOW.
- * @param element Element ID in the stable
- * range 1..5.
+ * @param kind One of EE_TEMPLATE_HAND, BLADE, IMPACT, or CROSSBOW.
+ * @param element Element ID in the stable range 1..5.
  * @return Resource descriptor, or NULL when the context or element is invalid.
  */
 const EEEffectTemplate *ee_effect_template(int kind, int element);
