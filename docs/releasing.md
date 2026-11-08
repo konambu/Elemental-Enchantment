@@ -69,6 +69,21 @@ python .\tools\check_particle_resources.py --game-data 'E:\SteamLibrary\steamapp
 
 These checks do not replace in-game verification. `--frost-dev` and `--ice-experimental` build development variants; do not publish those as the normal plugin.
 
+To run the MSVC static analyzer as an additional review, temporarily add compiler options for the build and restore the previous environment afterwards:
+
+```powershell
+$previousCl = $env:CL
+try {
+    $env:CL = '/analyze /W4'
+    python .\build.py
+    if ($LASTEXITCODE -ne 0) { throw 'Static-analysis build failed.' }
+} finally {
+    $env:CL = $previousCl
+}
+```
+
+This reports expected C4152 warnings for Windows hook pointer conversions and C6320/C6322 warnings for structured exception handlers around game integration. Review these in context rather than suppressing them wholesale, and investigate any new warning. The analyzer is not a substitute for testing the game hooks.
+
 ## Review and push source
 
 ```powershell
