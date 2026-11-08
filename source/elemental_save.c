@@ -24,5 +24,5 @@ int ee_save_store(const EESaveBackend *backend, const EEAffinity *state) {
     /* Never silently erase data from a newer or corrupt version. */
     if (status > 0 && !ee_affinity_decode(&previous, old))
         return EE_SAVE_UNSUPPORTED;
-    return backend->write(backend->context, values) ? EE_SAVE_OK : EE_SAVE_ERROR;
+    return backend->write(backend->context, values) > 0 ? EE_SAVE_OK : EE_SAVE_ERROR;
 }

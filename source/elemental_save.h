@@ -3,14 +3,12 @@
 #include "elemental_affinity.h"
 
 /** @file elemental_save.h
- * @brief Versioned affinity serialization over a caller-provided
- * backend.
+ * @brief Versioned affinity serialization over a caller-provided backend.
  */
 /* A backend reads/writes one namespaced triple in one character's save data.
- * Read returns 1 if
- * present, 0 if absent, -1 on failure. Write returns 1 on
- * success. These functions do not
- * interact with Kenshi by themselves. */
+ * Read returns a positive value if present, 0 if absent, or a negative value
+ * on failure. Write returns a positive value on success; zero or negative
+ * values indicate failure. The backend is responsible for accessing Kenshi. */
 typedef struct EESaveBackend {
     void *context;
     int (*read)(void *context, int out[3]);

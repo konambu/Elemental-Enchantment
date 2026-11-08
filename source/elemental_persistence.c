@@ -36,9 +36,8 @@ int ee_persistence_stage(EEPersistence *p, void *stats, const EESaveBackend *bac
         forget_pending(p, stats);
         return EE_SAVE_MISSING;
     }
-    /* Preserve a guarded record even when an existing custom field could not
-     * be read. Later
-     * character binding must not silently invent writable data. */
+    /* Preserve a guarded record when an existing field could not be read, so
+     * later character binding cannot silently invent writable data. */
     if (status < 0) {
         values[0] = -1;
         values[1] = 0;

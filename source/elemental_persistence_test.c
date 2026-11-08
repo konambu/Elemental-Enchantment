@@ -3,6 +3,8 @@
 typedef struct MockRead {
     int status;
     int values[3];
+    int write_status;
+    int writes;
 } MockRead;
 
 static int mock_read(void *context, int out[3]) {
@@ -13,6 +15,13 @@ static int mock_read(void *context, int out[3]) {
     for (i = 0; i < 3; ++i)
         out[i] = mock->values[i];
     return 1;
+}
+
+static int mock_write(void *context, const int values[3]) {
+    MockRead *mock = (MockRead *)context;
+    (void)values;
+    ++mock->writes;
+    return mock->write_status;
 }
 
 __declspec(dllexport) int ee_run_persistence_tests(void) {
@@ -43,5 +52,22 @@ __declspec(dllexport) int ee_run_persistence_tests(void) {
     record = ee_persistence_bind(&persistence, stats, character, 42, 7, 123, 2);
     if (!record || !record->read_only)
         return 6;
+
+    /* Never overwrite records we cannot read or decode. */
+    backend.write = mock_write;
+    mock.writes = 0;
+    if (ee_save_store(&backend, &saved) != EE_SAVE_ERROR || mock.writes)
+        return 7;
+    mock.status = 1;
+    mock.values[0] = -1;
+    if (ee_save_store(&backend, &saved) != EE_SAVE_UNSUPPORTED || mock.writes)
+        return 8;
+    mock.status = 0;
+    mock.write_status = -1;
+    if (ee_save_store(&backend, &saved) != EE_SAVE_ERROR || mock.writes != 1)
+        return 9;
+    mock.write_status = 1;
+    if (ee_save_store(&backend, &saved) != EE_SAVE_OK || mock.writes != 2)
+        return 10;
     return 0;
 }

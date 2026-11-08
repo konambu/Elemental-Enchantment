@@ -2,8 +2,7 @@
 #define ELEMENTAL_PERSISTENCE_H
 #include "elemental_characters.h"
 /** @file elemental_persistence.h
- * @brief Coordinates staged GameData reads and per-character save
- * lifecycle.
+ * @brief Coordinates staged GameData reads and per-character save lifecycle.
  */
 #define EE_PENDING_LIMIT 512
 typedef struct EEPendingSave {
@@ -15,8 +14,7 @@ typedef struct EEPersistence {
     EEPendingSave pending[EE_PENDING_LIMIT];
 } EEPersistence;
 /* Caller owns synchronization. A loaded stats object may not yet have a
- * usable character handle,
- * so valid data is staged until that actor appears. */
+ * usable character handle, so data is staged until that actor appears. */
 void ee_persistence_init(EEPersistence *);
 /** @brief Stage a stats record until its character handle is available. */
 int ee_persistence_stage(EEPersistence *, void *stats, const EESaveBackend *);
