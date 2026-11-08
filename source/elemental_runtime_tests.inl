@@ -1787,9 +1787,10 @@ static void test_ui_set_position(void *widget, int x, int y) {
     ((EETestWidget *)widget)->rect.left = x;
     ((EETestWidget *)widget)->rect.top = y;
 }
+static int test_ui_window_width = 700;
 static int test_ui_width(void *window) {
     (void)window;
-    return 700;
+    return test_ui_window_width;
 }
 static int test_ui_height(void *window) {
     (void)window;
@@ -1830,6 +1831,7 @@ __declspec(dllexport) int probeTestUIHooks(void) {
     test_widget_count = 0;
     test_canvas_created = 0;
     test_window_calls = 0;
+    test_ui_window_width = 700;
     ui_failed = 0;
     ui_panel_preference = 1;
     ui_scale_tenths = 10;
@@ -1899,6 +1901,16 @@ __declspec(dllexport) int probeTestUIHooks(void) {
         if (((EETestWidget *)view->panel)->rect.left != px + 45)
             return 23;
     }
+    test_ui_window_width = 800;
+    stats_window_update_hook(window);
+    if (!view->model.visible || ((EETestWidget *)view->panel)->rect.left != 857 ||
+        ((EETestWidget *)view->panel)->rect.top != 40)
+        return 26;
+    test_ui_window_width = 700;
+    stats_window_update_hook(window);
+    if (!view->model.visible || ((EETestWidget *)view->panel)->rect.left != 757 ||
+        ((EETestWidget *)view->panel)->rect.top != 40)
+        return 27;
     test_mouse_focus = view->opener;
     if (!mouse_press_hook((void *)2, 0, 0, 0) || view->model.visible)
         return 2;
