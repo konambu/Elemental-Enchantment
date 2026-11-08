@@ -2,7 +2,7 @@
 
 A work-in-progress Kenshi mod that gives player characters elemental enchantments for melee weapons, unarmed combat and crossbows. Fire, lightning, wind, water and ice have distinct effects and combat bonuses. Characters share one Elemental level, have individual aptitudes and unlock a secondary element at level 50.
 
-**Status:** initial beta. Published on [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3832978749). Do not enable this package alongside another copy of the mod.
+**Status:** beta. Published on [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3832978749). Do not enable this package alongside another copy of the mod.
 
 ## Requirements
 
@@ -23,13 +23,17 @@ With Mod Config Menu installed, open Options > MCM > Elemental Enchantment to en
 
 - `mod/Elemental Enchantment/`: Workshop package, including its plugin DLL.
 - `source/`: plugin source and the tests included in the local build.
-- `docs/`: draft Workshop description and change notes.
+- `docs/`: code map, release instructions, and Workshop text drafts.
 
 The `mod` folder matches the uploaded Workshop files. The plugin uses game and KenshiLib APIs, so compatibility with other versions has not been established.
 
 ## Build
 
-On Windows, install Python 3 and Visual Studio Build Tools with x64 C++ tools, then run `python build.py`. The DLL is written to `build/ElementalEnchantmentTest.dll`. Build output is not installed automatically.
+On Windows, install Python 3 and Visual Studio Build Tools with x64 C++ tools, then run `python build.py`. The DLL is written to `build/ElementalEnchantmentTest.dll`. Build output is not installed automatically. See [the release checklist](docs/releasing.md) for copying it into Kenshi and updating Steam Workshop.
+
+The module roles and stable save/resource names are listed in [Code organization](docs/code-organization.md).
+Public C interfaces use Doxygen-style comments. If Doxygen is installed, run `doxygen Doxyfile` to generate browsable API docs under `docs/api/`.
+Use the checked-in `.clang-format` when editing C files; run `clang-format -i <files>` to keep them readable and consistent.
 
 ## 日本語
 

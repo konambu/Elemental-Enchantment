@@ -1,4 +1,10 @@
-"""Build the local Elemental Enchantment plugin candidate."""
+"""Build the local Elemental Enchantment plugin candidate.
+
+Default: normal game plugin written to build/ElementalEnchantmentTest.dll.
+--test: include native test hooks and use a separate output DLL.
+--frost-dev and --ice-experimental: build isolated development variants.
+This script never copies a DLL into the game or uploads to Steam Workshop.
+"""
 from pathlib import Path
 import os, subprocess
 import sys

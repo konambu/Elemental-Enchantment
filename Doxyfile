@@ -1,0 +1,11 @@
+PROJECT_NAME           = "Elemental Enchantment"
+OUTPUT_DIRECTORY       = docs/api
+INPUT                  = source
+FILE_PATTERNS          = *.h *.c *.inl
+RECURSIVE              = NO
+EXTRACT_ALL            = YES
+EXTRACT_STATIC         = NO
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+QUIET                  = YES
+WARN_IF_UNDOCUMENTED   = NO
