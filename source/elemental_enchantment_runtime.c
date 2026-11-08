@@ -128,7 +128,7 @@ static HandEffect hand_effects[EE_TRACKED_ACTOR_LIMIT * 2];
 static void *guard;
 static DWORD internal;
 static int active, logged_full;
-static U64 serial;
+static U64 visual_serial;
 static char log_path[1024];
 static MODULE self;
 static char settings_path[1024];
@@ -1165,7 +1165,7 @@ static float block_speed_hook(void *stats) {
 static int character_hit_hook(
     void *target, int direction, void *damage, void *attacker, void *technique, int combo) {
     int result, has_bonus = 0;
-    EEDamage original, modified, bonus;
+    EEDamage original = {0}, modified = {0}, bonus;
     if (active && damage && attacker && target && attacker != target &&
         internal != GetCurrentThreadId())
         __try {
@@ -1260,7 +1260,7 @@ static void *crossbow_wound_hook(void *medical,
                                  int *attackdir,
                                  void *bolt) {
     int applied = 0, impact_element = 0, impact_secondary = 0;
-    EEDamage modified, original, bonus;
+    EEDamage modified = {0}, original = {0}, bonus;
     void *result;
     void *stats = 0;
     void *impact_scene = 0;
@@ -1615,7 +1615,7 @@ static void character_destroy_hook(void *character) {
 static void *
 create_secondary_effect(void *manager, void *scene, void *node, const String *tmpl, float height) {
     String name = {{"EE_S00000000"}, 12, 15, 0};
-    unsigned int n = (unsigned int)++serial, j;
+    unsigned int n = (unsigned int)++visual_serial, j;
     void *effect;
     void *tech;
     void *emitter;
@@ -1703,7 +1703,7 @@ static void update_hands(void *manager, float dt) {
                 clear_hand(h);
             if (!h->effect) {
                 String name = {{"EE_H00000000"}, 12, 15, 0}, template_storage;
-                unsigned int n = (unsigned int)++serial, j;
+                unsigned int n = (unsigned int)++visual_serial, j;
                 h->character = a->character;
                 h->body = a->body;
                 h->bone = bone;
@@ -1819,7 +1819,7 @@ static void update(float dt) {
                     cleanup(e);
                 if (!e->effect) {
                     String name = {{"EE_F00000000"}, 12, 15, 0};
-                    unsigned int n = (unsigned int)++serial, j;
+                    unsigned int n = (unsigned int)++visual_serial, j;
                     e->scene = node_scene(parent);
                     if (!e->scene)
                         continue;

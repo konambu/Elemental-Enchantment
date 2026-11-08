@@ -128,7 +128,7 @@ static void stats_window_update_hook(void *window) {
     void *character;
     void *stats;
     const unsigned char *h;
-    unsigned int index, serial_number, sx, sy;
+    unsigned int index = 0, serial_number = 0, sx, sy;
     int i, editable = 0, have = 0;
     EEAffinity affinity;
     original_stats_window_update(window);
