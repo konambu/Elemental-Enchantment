@@ -1,0 +1,16 @@
+/* Prototype impact bursts: queued on an acknowledged melee hit, rendered on
+ * the normal visual update thread. A scene clear discards pending work. */
+#define EE_IMPACT_LIMIT 32
+typedef struct {void* scene;void* parent;void* node;void* fx;void* fx2;Vec position;U64 born;float age;int element,secondary;} EEImpact;
+static EEImpact impacts[EE_IMPACT_LIMIT];
+static const String* impact_template(int element){
+    static String fire={{"EE_Impact_Fire"},14,15,0},light={{0},19,19,0},wind={{"EE_Impact_Wind"},14,15,0},water={{"EE_Impact_Water"},15,15,0},ice={{"EE_Impact_Ice"},13,15,0};
+    light.text.heap="EE_Impact_Lightning";
+    return element==1?&fire:element==2?&light:element==3?&wind:element==4?&water:element==5?&ice:0;
+}
+static void impact_clear(EEImpact* p){void* manager=particle_manager?particle_manager():0;if(manager&&p->scene){if(p->fx2)particle_destroy(manager,p->fx2,p->scene);if(p->fx)particle_destroy(manager,p->fx,p->scene);}if(p->node&&p->scene)node_destroy(p->scene,p->node);*p=(EEImpact){0};}
+static void impact_clear_scene(void* scene){int i;for(i=0;i<EE_IMPACT_LIMIT;++i)if(impacts[i].scene==scene)impact_clear(&impacts[i]);}
+static void impact_clear_parent(void* parent){int i;if(!parent)return;for(i=0;i<EE_IMPACT_LIMIT;++i)if(impacts[i].parent==parent)impact_clear(&impacts[i]);}
+static int impact_queue_position(void* scene,const Vec* position,int element,int secondary){int i;if(!show_impacts||!scene||!position||element<1||element>5)return 0;for(i=0;i<EE_IMPACT_LIMIT;++i)if(!impacts[i].scene){EEImpact* p=&impacts[i];p->scene=scene;p->position=*position;p->born=GetTickCount64();p->element=element;p->secondary=secondary>=1&&secondary<=5&&secondary!=element?secondary:0;return i+1;}return 0;}
+static void impact_queue_character(void* target,int element,int secondary){void* appearance;void* body;void* parent;void* scene;Vec position={0,10.0f,0};int slot;if(!show_impacts||!target||!character_appearance||!appearance_body||!parent_node||!node_scene)return;appearance=character_appearance(target);body=appearance?appearance_body(appearance):0;parent=body?parent_node(body):0;scene=parent?node_scene(parent):0;if(!scene)return;slot=impact_queue_position(scene,&position,element,secondary);if(slot)impacts[slot-1].parent=parent;}
+static void impact_update(void* manager,float dt){int i;const float bounds[6]={0,0,0,40,40,40};for(i=0;i<EE_IMPACT_LIMIT;++i){EEImpact* p=&impacts[i];const String* tmpl;void* root;if(!p->scene)continue;if(!show_impacts||(!p->node&&GetTickCount64()-p->born>1000)){impact_clear(p);continue;}if(!p->node){root=p->parent?p->parent:(trail_root?trail_root(p->scene,0):0);tmpl=impact_template(p->element);if(!root||!tmpl||!particle_template(manager,tmpl)){impact_clear(p);continue;}p->node=node_create(p->scene,0);if(!p->node){impact_clear(p);continue;}node_add(root,p->node);node_position(p->node,&p->position);p->fx=create_secondary_effect(manager,p->scene,p->node,tmpl,0);if(!p->fx){impact_clear(p);continue;}if(p->secondary){tmpl=impact_template(p->secondary);if(tmpl)p->fx2=create_secondary_effect(manager,p->scene,p->node,tmpl,0);}}particle_update(p->fx,dt);set_aabb(p->fx,bounds);if(p->fx2){particle_update(p->fx2,dt);set_aabb(p->fx2,bounds);}p->age+=dt;if(p->age>=1.5f)impact_clear(p);}}

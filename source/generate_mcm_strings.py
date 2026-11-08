@@ -10,16 +10,16 @@ def c_string(text):
     return '"' + '""'.join(f'\\x{byte:02x}' for byte in text.encode('utf-8')) + '"'
 
 lines = [
-    '#ifndef SB_MCM_STRINGS_H',
-    '#define SB_MCM_STRINGS_H',
-    'typedef struct SBMcmText {const char* id;const char* section;const char* strength;const char* strength_tip;const char* trails;const char* trails_tip;const char* impact;const char* impact_tip;const char* xp;const char* xp_tip;const char* ui_section;const char* ui_scale;const char* ui_scale_tip;} SBMcmText;',
-    'static const SBMcmText sb_mcm_texts[]={',
+    '#ifndef EE_MCM_STRINGS_H',
+    '#define EE_MCM_STRINGS_H',
+    'typedef struct EEMcmText {const char* id;const char* section;const char* strength;const char* strength_tip;const char* trails;const char* trails_tip;const char* impact;const char* impact_tip;const char* xp;const char* xp_tip;const char* ui_section;const char* ui_scale;const char* ui_scale_tip;} EEMcmText;',
+    'static const EEMcmText ee_mcm_texts[]={',
 ]
 for locale, strings in languages.items():
     lines.append('{' + ','.join(c_string(s) for s in [locale, *strings]) + '},')
 lines.extend([
     '};',
-    'static const SBMcmText* sb_mcm_text(const char* id){unsigned i;for(i=0;i<sizeof(sb_mcm_texts)/sizeof(sb_mcm_texts[0]);++i){const char* a=id;const char* b=sb_mcm_texts[i].id;while(a&&*a&&*a==*b){++a;++b;}if(a&&!*a&&!*b)return &sb_mcm_texts[i];}return &sb_mcm_texts[0];}',
+    'static const EEMcmText* ee_mcm_text(const char* id){unsigned i;for(i=0;i<sizeof(ee_mcm_texts)/sizeof(ee_mcm_texts[0]);++i){const char* a=id;const char* b=ee_mcm_texts[i].id;while(a&&*a&&*a==*b){++a;++b;}if(a&&!*a&&!*b)return &ee_mcm_texts[i];}return &ee_mcm_texts[0];}',
     '#endif',
 ])
-(directory / 'spellblade_mcm_strings.h').write_text('\n'.join(lines) + '\n', encoding='ascii', newline='\n')
+(directory / 'elemental_mcm_strings.h').write_text('\n'.join(lines) + '\n', encoding='ascii', newline='\n')

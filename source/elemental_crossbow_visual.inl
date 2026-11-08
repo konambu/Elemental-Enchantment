@@ -23,7 +23,7 @@ static const String* cb_template(int e){static String f={{0},21,21,0},l={{0},17,
 /* Keep the engine's reload state machine and shorten only its timer. */
 static float cb_reload_adjust(float timer,float dt,float rate){float extra;if(!(timer>0.0f)||!(dt>0.0f&&dt<1.0f)||!(rate>1.0f&&rate<2.0f))return timer;extra=dt*(rate-1.0f);return extra>=timer?0.0f:timer-extra;}
 static void cb_apply_wind_reload(void* ranged,float dt){
-    void* actor;float* timer;float max,old,rate=1.0f;int i,eligible=0;SBAffinity a={0};
+    void* actor;float* timer;float max,old,rate=1.0f;int i,eligible=0;EEAffinity a={0};
     if(!active||!ranged||!(dt>0.0f&&dt<1.0f)||internal==GetCurrentThreadId())return;
     __try {
         if(*(int*)ranged!=2)return;actor=*(void**)((unsigned char*)ranged+0x68);if(!actor)return;
@@ -31,8 +31,8 @@ static void cb_apply_wind_reload(void* ranged,float dt){
         if(!(max>.001f&&max<1000.0f&&old>0.0f&&old<=max+.01f))return;
         AcquireSRWLockExclusive(&guard);
         __try {
-            for(i=0;i<SB_ALLY_LIMIT;++i)if(allies[i].character==actor&&(allies[i].element==3||allies[i].secondary==3)){eligible=1;break;}
-            if(eligible&&combat_affinity_locked(actor,character_stats(actor),&a))rate=sb_affinity_combat_speed_scaled(&a,1.0f,effect_multiplier);
+            for(i=0;i<EE_ALLY_LIMIT;++i)if(allies[i].character==actor&&(allies[i].element==3||allies[i].secondary==3)){eligible=1;break;}
+            if(eligible&&combat_affinity_locked(actor,character_stats(actor),&a))rate=ee_affinity_combat_speed_scaled(&a,1.0f,effect_multiplier);
             if(rate>1.0f&&rate<2.0f)*timer=cb_reload_adjust(old,dt,rate);
         } __finally {ReleaseSRWLockExclusive(&guard);}
     } __except(1) {logline("CROSSBOW: wind reload bonus skipped after error.\r\n");}
@@ -53,8 +53,8 @@ static void cb_trace_hook(void* projectile,const Vec* pos,const Vec* direction){
     int i,j,slot=-1;unsigned index,serial_number;void* node;original_projectile_trace(projectile,pos,direction);
     if(!active||!projectile||internal==GetCurrentThreadId())return;
     __try {index=*(unsigned*)((unsigned char*)projectile+0x34);serial_number=*(unsigned*)((unsigned char*)projectile+0x38);node=*(void**)((unsigned char*)projectile+0x58);if(!node)return;
-        AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try {for(i=0;i<SB_ALLY_LIMIT;++i)if(allies[i].character&&allies[i].element){const unsigned char* h=(const unsigned char*)character_handle(allies[i].character);if(h&&*(unsigned*)(h+0x14)==index&&*(unsigned*)(h+0x18)==serial_number)break;}
-            if(i<SB_ALLY_LIMIT){for(j=0;j<CB_LIMIT;++j){if(cb_flights[j].projectile==projectile){cb_clear_flight(&cb_flights[j]);slot=j;break;}if(slot<0&&!cb_flights[j].projectile)slot=j;}if(slot>=0){CBFlight* f=&cb_flights[slot];f->projectile=projectile;f->source=node;f->born=GetTickCount64();f->shooter_index=index;f->shooter_serial=serial_number;f->shot_thread=GetCurrentThreadId();for(j=0;j<CB_LIMIT;++j)if(cb_shots[j].thread==f->shot_thread&&cb_shots[j].index==index&&cb_shots[j].serial==serial_number&&cb_shots[j].sequence>f->shot_sequence)f->shot_sequence=cb_shots[j].sequence;f->element=allies[i].element;f->secondary=allies[i].secondary;f->previous=pos?*pos:(Vec){0};}}}
+        AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try {for(i=0;i<EE_ALLY_LIMIT;++i)if(allies[i].character&&allies[i].element){const unsigned char* h=(const unsigned char*)character_handle(allies[i].character);if(h&&*(unsigned*)(h+0x14)==index&&*(unsigned*)(h+0x18)==serial_number)break;}
+            if(i<EE_ALLY_LIMIT){for(j=0;j<CB_LIMIT;++j){if(cb_flights[j].projectile==projectile){cb_clear_flight(&cb_flights[j]);slot=j;break;}if(slot<0&&!cb_flights[j].projectile)slot=j;}if(slot>=0){CBFlight* f=&cb_flights[slot];f->projectile=projectile;f->source=node;f->born=GetTickCount64();f->shooter_index=index;f->shooter_serial=serial_number;f->shot_thread=GetCurrentThreadId();for(j=0;j<CB_LIMIT;++j)if(cb_shots[j].thread==f->shot_thread&&cb_shots[j].index==index&&cb_shots[j].serial==serial_number&&cb_shots[j].sequence>f->shot_sequence)f->shot_sequence=cb_shots[j].sequence;f->element=allies[i].element;f->secondary=allies[i].secondary;f->previous=pos?*pos:(Vec){0};}}}
         __finally {internal=0;ReleaseSRWLockExclusive(&guard);}
     }__except(1){logline("CROSSBOW: projectile sample skipped.\r\n");}
 }
@@ -75,16 +75,16 @@ static void cb_capture_created(CBShot* shot,int element,int secondary){
 }
 static void cb_shoot_hook(void* gun,void* actor,void* target,int stat,const Vec* aim){
     int i,slot=-1,element=0,secondary=0;unsigned index=0,serial_number=0;U64 sequence=0;float speed=1.0f;int player=0;DWORD tid=GetCurrentThreadId();
-    if(active&&actor&&internal!=tid)__try {if(character_is_player(actor)){const unsigned char* h=(const unsigned char*)character_handle(actor);void* stats=character_stats(actor);if(h&&stats){index=*(const unsigned*)(h+0x14);serial_number=*(const unsigned*)(h+0x18);AcquireSRWLockExclusive(&guard);__try {SBCharacterRecord* r=sb_persistence_bind(&persistence,stats,actor,index,serial_number,index^(serial_number*0x9e3779b9u),(unsigned)element_from_character(actor));if(r&&!r->read_only){speed=sb_affinity_attack_speed_scaled(&r->affinity,1.0f,effect_multiplier);player=1;for(i=0;i<CB_LIMIT;++i)if(!cb_shots[i].sequence){slot=i;break;}if(slot>=0){sequence=++cb_shot_sequence;if(!sequence)sequence=++cb_shot_sequence;cb_shots[slot].thread=tid;cb_shots[slot].index=index;cb_shots[slot].serial=serial_number;cb_shots[slot].sequence=sequence;cb_shots[slot].count=0;}}}__finally{ReleaseSRWLockExclusive(&guard);}}}}__except(1){player=0;}
+    if(active&&actor&&internal!=tid)__try {if(character_is_player(actor)){const unsigned char* h=(const unsigned char*)character_handle(actor);void* stats=character_stats(actor);if(h&&stats){index=*(const unsigned*)(h+0x14);serial_number=*(const unsigned*)(h+0x18);AcquireSRWLockExclusive(&guard);__try {EECharacterRecord* r=ee_persistence_bind(&persistence,stats,actor,index,serial_number,index^(serial_number*0x9e3779b9u),(unsigned)element_from_character(actor));if(r&&!r->read_only){speed=ee_affinity_attack_speed_scaled(&r->affinity,1.0f,effect_multiplier);player=1;for(i=0;i<CB_LIMIT;++i)if(!cb_shots[i].sequence){slot=i;break;}if(slot>=0){sequence=++cb_shot_sequence;if(!sequence)sequence=++cb_shot_sequence;cb_shots[slot].thread=tid;cb_shots[slot].index=index;cb_shots[slot].serial=serial_number;cb_shots[slot].sequence=sequence;cb_shots[slot].count=0;}}}__finally{ReleaseSRWLockExclusive(&guard);}}}}__except(1){player=0;}
     original_crossbow_shoot(gun,actor,target,stat,aim);
-    if(player&&sequence){AcquireSRWLockExclusive(&guard);__try {if(slot>=0&&cb_shots[slot].sequence==sequence){for(i=0;i<SB_ALLY_LIMIT;++i)if(allies[i].character==actor){element=allies[i].element;secondary=allies[i].secondary;break;}if(element)cb_capture_created(&cb_shots[slot],element,secondary);cb_shots[slot].sequence=0;cb_shots[slot].count=0;}if(speed>1.0f&&speed<2.0f)for(i=0;i<CB_LIMIT;++i){CBFlight* f=&cb_flights[i];if(f->projectile&&!f->speed_done&&f->shot_sequence==sequence){float* velocity=(float*)((unsigned char*)f->projectile+0x44);__try {if(*velocity>0.0f&&*velocity<10000.0f){*velocity*=speed;f->speed_done=1;}}__except(1){f->speed_done=1;}}}}__finally{ReleaseSRWLockExclusive(&guard);}}
+    if(player&&sequence){AcquireSRWLockExclusive(&guard);__try {if(slot>=0&&cb_shots[slot].sequence==sequence){for(i=0;i<EE_ALLY_LIMIT;++i)if(allies[i].character==actor){element=allies[i].element;secondary=allies[i].secondary;break;}if(element)cb_capture_created(&cb_shots[slot],element,secondary);cb_shots[slot].sequence=0;cb_shots[slot].count=0;}if(speed>1.0f&&speed<2.0f)for(i=0;i<CB_LIMIT;++i){CBFlight* f=&cb_flights[i];if(f->projectile&&!f->speed_done&&f->shot_sequence==sequence){float* velocity=(float*)((unsigned char*)f->projectile+0x44);__try {if(*velocity>0.0f&&*velocity<10000.0f){*velocity*=speed;f->speed_done=1;}}__except(1){f->speed_done=1;}}}}__finally{ReleaseSRWLockExclusive(&guard);}}
 }
 static void cb_destroy_hook(void* projectile){if(active&&projectile&&internal!=GetCurrentThreadId()){AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try{clear_crossbow_projectile(projectile);}__finally{internal=0;ReleaseSRWLockExclusive(&guard);}}original_projectile_destroy(projectile);}
 static int cb_create_fx(void* manager,void* scene,void** node,void** fx,void** fx2,int element,int secondary){void* root=trail_root?trail_root(scene,0):0;if(!root)return 0;*node=node_create(scene,0);if(!*node)return 0;node_add(root,*node);*fx=create_secondary_effect(manager,scene,*node,cb_template(element),0);if(!*fx)return 0;if(secondary)*fx2=create_secondary_effect(manager,scene,*node,cb_template(secondary),0);return 1;}
 static Vec cb_align_position(CBFlight* f,Vec raw){Vec p;if(!f->frames){if(f->has_origin){f->offset=(Vec){f->origin.x-raw.x,f->origin.y-raw.y,f->origin.z-raw.z};}}++f->frames;p=(Vec){raw.x+f->offset.x,raw.y+f->offset.y,raw.z+f->offset.z};if(f->frames==1)f->previous=p;return p;}
 static void cb_update_visuals_impl(void* manager,float dt){int i,j;U64 now=GetTickCount64();const float bounds[6]={0,0,0,25,25,25};
     for(i=0;i<CB_LIMIT;++i){CBCharge* c=&cb_charges[i];Ally* a=0;void* parent;float scale;Vec sz;
-        if(!c->character)continue;for(j=0;j<SB_ALLY_LIMIT;++j)if(allies[j].character==c->character){a=&allies[j];break;}
+        if(!c->character)continue;for(j=0;j<EE_ALLY_LIMIT;++j)if(allies[j].character==c->character){a=&allies[j];break;}
         if(!a||!a->body||!a->element||now-c->sample>500){cb_clear_charge(c);continue;}parent=parent_node(a->body);if(!parent){cb_clear_charge(c);continue;}
         if(c->fx&&(c->element!=a->element||c->secondary!=a->secondary||c->scene!=node_scene(parent))){cb_clear_charge(c);continue;}
         if(!c->fx){c->scene=node_scene(parent);c->element=a->element;c->secondary=a->secondary;if(!c->scene||!cb_create_fx(manager,c->scene,&c->node,&c->fx,&c->fx2,c->element,c->secondary)){cb_clear_charge(c);continue;}}

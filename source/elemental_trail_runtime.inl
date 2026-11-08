@@ -1,5 +1,5 @@
 /* Private, opt-in Ogre ribbon test. Caller holds the render guard. */
-typedef struct SBTrailColour {float r,g,b,a;} SBTrailColour;
+typedef struct EETrailColour {float r,g,b,a;} EETrailColour;
 static int trail_supported;
 static int trail_resolve(MODULE ogre)
 {
@@ -25,7 +25,7 @@ static void trail_drop(Entry* e)
 static void trail_cleanup(Entry* e){trail_drop(e);e->trail_has_direction=0;}
 static int trail_start(Entry* e,int element,const Vec* initial_tip)
 {
-    void** vtable;SBTrailColour color;Vec derived;String material={{"EE_Trail"},8,15,0},group={{"Autodetect"},10,15,0};
+    void** vtable;EETrailColour color;Vec derived;String material={{"EE_Trail"},8,15,0},group={{"Autodetect"},10,15,0};
     if(!trail_supported||!e->scene)return 0;
     e->ribbon_root=trail_root(e->scene,0);if(!e->ribbon_root)return 0;
     e->ribbon_node=node_create(e->scene,0);e->ribbon=trail_create(e->scene);
@@ -40,7 +40,7 @@ static int trail_start(Entry* e,int element,const Vec* initial_tip)
     color.a=.28f;
     ((void (*)(void*,const String*,const String*))vtable[37])(e->ribbon,&material,&group);
     ((void (*)(void*,float))vtable[48])(e->ribbon,e->length*1.2f);
-    ((void (*)(void*,U64,const SBTrailColour*))vtable[51])(e->ribbon,0,&color);
+    ((void (*)(void*,U64,const EETrailColour*))vtable[51])(e->ribbon,0,&color);
     ((void (*)(void*,U64,float))vtable[55])(e->ribbon,0,e->length*(e->pole?.53f:.86f));
     trail_colour_change(e->ribbon,0,0,0,0,.59f);
     /* Tag positions are in the same actor-relative space used by the blade

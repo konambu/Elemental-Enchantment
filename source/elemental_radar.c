@@ -1,4 +1,4 @@
-#include "spellblade_radar.h"
+#include "elemental_radar.h"
 typedef struct Point {int x,y;} Point;
 static const int ux[5]={0,951,588,-588,-951};
 static const int uy[5]={-1000,-309,809,809,-309};
@@ -22,7 +22,7 @@ static void triangle(unsigned char* p,int w,int h,Point a,Point b,Point c,unsign
     for(y=miny;y<=maxy;++y)for(x=minx;x<=maxx;++x){int e1=edge(a,b,x,y),e2=edge(b,c,x,y),e3=edge(c,a,x,y);
         if((e1>=0&&e2>=0&&e3>=0)||(e1<=0&&e2<=0&&e3<=0))dot(p,w,h,x,y,color);}
 }
-int sb_radar_draw(unsigned char* pixels,int w,int h,const SBAffinity* state)
+int ee_radar_draw(unsigned char* pixels,int w,int h,const EEAffinity* state)
 {
     Point center,axis[5],polygon[5],ring[5];int i,j,x,y,radius;
     if(!pixels||!state||w<32||h<32||w>512||h>512||state->selected>5)return 0;
