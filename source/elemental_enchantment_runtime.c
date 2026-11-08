@@ -530,28 +530,10 @@ static EETrackedActor *track_actor(
         if (slot < 0 && !tracked_actors[i].character)
             slot = i;
     }
-    if (slot >= 0) {
-        if (eligible && body) {
-            if (tracked_actors[slot].character != character) {
-                tracked_actors[slot].secondary = 0;
-                tracked_actors[slot].level = 0;
-                tracked_actors[slot].hit_glow = 0.0f;
-                tracked_actors[slot].attacking = 0;
-                tracked_actors[slot].melee_weapon = 0;
-            }
-#ifdef EE_ENABLE_PERSISTENCE
-            tracked_actors[slot].element = element;
-#else
-            if (tracked_actors[slot].character != character)
-                tracked_actors[slot].element = element;
-#endif
-            tracked_actors[slot].character = character;
-            tracked_actors[slot].body = body;
-            tracked_actors[slot].left = left;
-            tracked_actors[slot].right = right;
-            tracked_actors[slot].unarmed = unarmed;
-            return &tracked_actors[slot];
-        } else if (tracked_actors[slot].character == character) {
+    if (slot < 0)
+        return 0;
+    if (!eligible || !body) {
+        if (tracked_actors[slot].character == character) {
             tracked_actors[slot].character = 0;
             tracked_actors[slot].body = 0;
             tracked_actors[slot].left = 0;
@@ -559,8 +541,27 @@ static EETrackedActor *track_actor(
             tracked_actors[slot].unarmed = 0;
             tracked_actors[slot].element = 0;
         }
+        return 0;
     }
-    return 0;
+    if (tracked_actors[slot].character != character) {
+        tracked_actors[slot].secondary = 0;
+        tracked_actors[slot].level = 0;
+        tracked_actors[slot].hit_glow = 0.0f;
+        tracked_actors[slot].attacking = 0;
+        tracked_actors[slot].melee_weapon = 0;
+    }
+#ifdef EE_ENABLE_PERSISTENCE
+    tracked_actors[slot].element = element;
+#else
+    if (tracked_actors[slot].character != character)
+        tracked_actors[slot].element = element;
+#endif
+    tracked_actors[slot].character = character;
+    tracked_actors[slot].body = body;
+    tracked_actors[slot].left = left;
+    tracked_actors[slot].right = right;
+    tracked_actors[slot].unarmed = unarmed;
+    return &tracked_actors[slot];
 }
 static void forget_body(void *body) {
     int i;
