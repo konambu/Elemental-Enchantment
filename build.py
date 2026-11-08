@@ -5,10 +5,17 @@ Default: normal game plugin written to build/ElementalEnchantmentTest.dll.
 --frost-dev and --ice-experimental: build isolated development variants.
 This script never copies a DLL into the game or uploads to Steam Workshop.
 """
+import argparse
 import os
 import subprocess
-import sys
 from pathlib import Path
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--test', action='store_true', help='build the separate native test DLL')
+variants = parser.add_mutually_exclusive_group()
+variants.add_argument('--frost-dev', action='store_true', help='build the frost development variant')
+variants.add_argument('--ice-experimental', action='store_true', help='build the experimental ice variant')
+args = parser.parse_args()
 
 root = Path(__file__).resolve().parent
 source = root / 'source'
@@ -31,15 +38,15 @@ for name in ('kernel32', 'ntdll'):
     run_build([vc / 'lib.exe', '/nologo', '/def:' + str(source / (name + '.def')),
                '/machine:x64', '/out:' + str(out / (name + '.lib'))])
 
-test = '--test' in sys.argv
+test = args.test
 target = out / ('ElementalEnchantmentTests.dll' if test else 'ElementalEnchantmentTest.dll')
 flags = ['/DEE_ENABLE_PERSISTENCE', '/DEE_ENABLE_UI', '/DEE_ENABLE_TRAIL']
 if test:
     flags += ['/DELEMENTAL_NATIVE_TEST']
-if '--frost-dev' in sys.argv:
+if args.frost_dev:
     target = out / ('FrostReloadDevTest.dll' if test else 'FrostReloadDev.dll')
     flags += ['/DEE_FROST_RELOAD_DEV']
-if '--ice-experimental' in sys.argv:
+if args.ice_experimental:
     target = out / ('IceSceneNodeTest.dll' if test else 'IceSceneNodeTrial.dll')
     flags += ['/DEE_ICE_OVERLAY_EXPERIMENTAL']
 
