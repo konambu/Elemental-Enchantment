@@ -3,7 +3,10 @@
 /* Drop stale loading samples and bound the life of orphaned projectile visuals. */
 #define CB_CHARGE_STALE_MS 500u
 #define CB_FLIGHT_MAX_AGE_MS 10000u
-/* Ranged combat fields for the executable checked before these hooks install. */
+/* KenshiLib's combat/RangedCombatClass.h identifies the reload state,
+ * gun, character, and timer fields below; GunClass.h identifies orientation.
+ * These offsets are specific to the supported executable. Flight hooks are
+ * gated on its module fingerprint; individual offsets are not probed. */
 enum {
     CB_STATE_RELOADING = 2,
     CB_GUN_OFFSET = 0x28,
