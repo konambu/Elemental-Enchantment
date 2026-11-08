@@ -16,6 +16,7 @@ CHECKS = (
     "ee_test_new_aptitudes",
     "ee_run_ui_model_tests",
     "ee_run_ui_view_tests",
+    "ee_run_radar_tests",
     "probeTestHalfEffectDisplay",
     "probeTestTemplateStrings",
     "probeTestXPScaling",
