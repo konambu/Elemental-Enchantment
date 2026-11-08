@@ -184,6 +184,13 @@ float ee_affinity_attack_speed_scaled(const EEAffinity *s, float speed, float mu
     return speed + (ee_affinity_attack_speed(s, speed) - speed) * multiplier;
 }
 
+/* Save payload v4 (three integers, stored under the existing SB_Data key):
+ * [0]: primary in bits 0..2, aptitude code in 3..7, version in 8..15,
+ *      secondary in 16..18; bits 19..31 are reserved and must be zero.
+ * [1]: total XP in quarter-point units. [2]: fractional XP in hundredths.
+ * Aptitude codes 0..4 identify the strongest element in storage order;
+ * code 5 means all five elements have 100% aptitude.
+ * These bit positions are part of the save format, not internal enum values. */
 int ee_affinity_encode(const EEAffinity *s, int out[3]) {
     unsigned int code = 5;
     int i, j, all = 1;
@@ -241,6 +248,8 @@ int ee_affinity_decode(EEAffinity *s, const int in[3]) {
         return 1;
     }
     if (version == 3) {
+        /* Version 3 stored XP separately for each element. Preserve the
+         * highest progress when migrating to the shared Elemental level. */
         unsigned int code = (meta & 255u) >> 3, highest = 0;
         unsigned short old_xp[5];
         tmp.selected = meta & 7u;
@@ -279,6 +288,8 @@ int ee_affinity_decode(EEAffinity *s, const int in[3]) {
     tmp.secondary = 0;
     tmp.xp_fraction = 0;
     {
+        /* Versions 1 and 2 stored five rates rather than an aptitude code.
+         * Normalize them to the current ring using the strongest old rate. */
         unsigned int best = 0;
         int all = 1;
         for (i = 0; i < 5; ++i) {

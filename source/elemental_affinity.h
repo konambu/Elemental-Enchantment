@@ -55,6 +55,7 @@ float ee_affinity_combat_speed_scaled(const EEAffinity *, float base_speed, floa
 float ee_affinity_attack_speed_scaled(const EEAffinity *, float base_speed, float multiplier);
 /** @brief Encode the current version into the fixed three-integer save payload. */
 int ee_affinity_encode(const EEAffinity *, int out_three[3]);
-/** @brief Decode only supported data; reject corrupt or newer-version records. */
+/** @brief Decode versions 1..4; leave the output untouched on invalid data.
+ * Older records migrate to the current shared-level and aptitude rules. */
 int ee_affinity_decode(EEAffinity *, const int in_three[3]);
 #endif
