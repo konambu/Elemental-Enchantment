@@ -1677,7 +1677,15 @@ static const String *element_template(String *storage, int kind, int element) {
     const EEEffectTemplate *source = ee_effect_template(kind, element);
     if (!storage || !source)
         return 0;
-    storage->text.heap = source->resource;
+    if (source->capacity < sizeof(storage->text.small)) {
+        unsigned int i;
+        volatile char *small = storage->text.small;
+        for (i = 0; i < source->size; ++i)
+            small[i] = source->resource[i];
+        small[i] = '\0';
+    } else {
+        storage->text.heap = source->resource;
+    }
     storage->size = source->size;
     storage->capacity = source->capacity;
     storage->allocator = 0;
@@ -2595,6 +2603,28 @@ int __stdcall DllMain(MODULE module, DWORD reason, void *unused) {
 }
 #ifdef ELEMENTAL_NATIVE_TEST
 /* Only exported in the isolated engine test build; never in the game package. */
+__declspec(dllexport) int probeTestTemplateStrings(void) {
+    int kind, element;
+    for (kind = EE_TEMPLATE_HAND; kind <= EE_TEMPLATE_CROSSBOW; ++kind) {
+        for (element = 1; element <= 5; ++element) {
+            String storage;
+            const EEEffectTemplate *expected = ee_effect_template(kind, element);
+            const String *actual = element_template(&storage, kind, element);
+            const char *text;
+            unsigned int i;
+            if (!expected || !actual || actual->size != expected->size ||
+                actual->capacity != expected->capacity)
+                return 1;
+            text = actual->capacity < 16 ? actual->text.small : actual->text.heap;
+            for (i = 0; i < expected->size; ++i)
+                if (text[i] != expected->resource[i])
+                    return 2;
+            if (text[expected->size] != '\0')
+                return 3;
+        }
+    }
+    return 0;
+}
 static void *impact_test_appearance(void *target) {
     return target ? (void *)11 : 0;
 }
