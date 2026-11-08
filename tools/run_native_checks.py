@@ -68,24 +68,27 @@ def main():
                 print(result.stderr.strip())
         else:
             print(f"PASS {name}")
-    try:
-        resource_check = subprocess.run(
-            [sys.executable, str(ROOT / "tools" / "check_particle_resources.py")],
-            capture_output=True,
-            text=True,
-            timeout=20,
-        )
-    except subprocess.TimeoutExpired:
-        failed.append("particle resources")
-        print("FAIL particle resources: timed out")
-    else:
-        if resource_check.returncode:
-            failed.append("particle resources")
-            print("FAIL particle resources")
-            print((resource_check.stdout + resource_check.stderr).strip())
+    scripts = (("particle resources", "check_particle_resources.py"),
+               ("localization", "check_localization.py"))
+    for label, script in scripts:
+        try:
+            result = subprocess.run(
+                [sys.executable, str(ROOT / "tools" / script)],
+                capture_output=True,
+                text=True,
+                timeout=20,
+            )
+        except subprocess.TimeoutExpired:
+            failed.append(label)
+            print(f"FAIL {label}: timed out")
         else:
-            print("PASS particle resources")
-    total = len(CHECKS) + 1
+            if result.returncode:
+                failed.append(label)
+                print(f"FAIL {label}")
+                print((result.stdout + result.stderr).strip())
+            else:
+                print(f"PASS {label}")
+    total = len(CHECKS) + len(scripts)
     print(f"{total - len(failed)}/{total} checks passed")
     return 1 if failed else 0
 
