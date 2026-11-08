@@ -28,7 +28,7 @@ python .\source\generate_localization.py
 python .\build.py
 if ($LASTEXITCODE -ne 0) { throw 'Plugin build failed; do not stage an older DLL.' }
 python .\tools\check_release_exports.py
-if ($LASTEXITCODE -ne 0) { throw 'Plugin export check failed.' }
+if ($LASTEXITCODE -ne 0) { throw 'Plugin export or dependency check failed.' }
 
 # Put that DLL into the project package first:
 Copy-Item -LiteralPath '.\build\ElementalEnchantmentTest.dll' `
@@ -49,6 +49,8 @@ if ($builtHash -ne $packageHash -or $builtHash -ne $stagedHash) {
 ```
 
 All three SHA256 values should match. `robocopy /E` copies the project package into Kenshi without deleting extra files already in the local mod folder; inspect that folder for stale files before testing or publishing.
+
+The DLL dependency check covers static Windows DLL imports only. It does not verify runtime-loaded components such as RE_Kenshi or their versions; those still need in-game verification.
 
 To run the engine-independent native checks, build a separate test DLL and run the check runner:
 

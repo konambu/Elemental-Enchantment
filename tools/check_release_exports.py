@@ -1,4 +1,4 @@
-"""Check that the normal plugin exports only its expected public entry points."""
+"""Check the normal plugin's exported entry points and static DLL dependencies."""
 
 import os
 import re
@@ -8,6 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DLL = ROOT / 'build' / 'ElementalEnchantmentTest.dll'
 EXPECTED = {'?startPlugin@@YAXXZ', 'startPlugin', 'MCM_Describe'}
+EXPECTED_DEPENDENCIES = {'kernel32.dll', 'ntdll.dll'}
 
 
 def main():
@@ -26,7 +27,15 @@ def main():
                              result.stdout, re.MULTILINE))
     if exports != EXPECTED:
         raise SystemExit(f'Unexpected exports: {sorted(exports)}; expected {sorted(EXPECTED)}')
-    print('Normal plugin exports only the expected entry points')
+    result = subprocess.run([str(dumpbin), '/dependents', str(DLL)], capture_output=True,
+                            text=True, errors='replace', check=True)
+    dependencies = {name.lower() for name in re.findall(
+        r'^\s*([A-Za-z0-9_.-]+\.dll)\s*$', result.stdout, re.MULTILINE | re.IGNORECASE
+    )}
+    if dependencies != EXPECTED_DEPENDENCIES:
+        raise SystemExit(f'Unexpected DLL dependencies: {sorted(dependencies)}; '
+                         f'expected {sorted(EXPECTED_DEPENDENCIES)}')
+    print('Normal plugin exports and static DLL dependencies match expectations')
 
 
 if __name__ == '__main__':
