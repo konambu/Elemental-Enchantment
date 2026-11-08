@@ -1,21 +1,12 @@
 #ifndef ELEMENTAL_GAMEDATA_H
 #define ELEMENTAL_GAMEDATA_H
 #include "elemental_save.h"
+#include "elemental_game_string.h"
 
 /** @file elemental_gamedata.h
  * @brief Minimal Kenshi GameData ABI adapter used by the save
  * backend.
  */
-/* The Kenshi VC2010 string ABI used by KenshiLib. Only constant, small ASCII
- * keys are
- * constructed here; borrowed names are read with bounds checks. */
-typedef struct EEGameString {
-    union {
-        char small[16];
-        const char *heap;
-    } text;
-    unsigned long long size, capacity, allocator;
-} EEGameString;
 typedef struct EEGameDataAPI {
     unsigned char (*list_exists)(void *, const EEGameString *);
     int (*list_size)(void *, const EEGameString *);

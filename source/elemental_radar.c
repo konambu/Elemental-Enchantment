@@ -4,7 +4,6 @@ typedef struct Point {
 } Point;
 static const int ux[5] = {0, 951, 588, -588, -951};
 static const int uy[5] = {-1000, -309, 809, 809, -309};
-static const int ring_order[5] = {0, 2, 4, 3, 1};
 static void dot(unsigned char *p, int w, int h, int x, int y, unsigned int color) {
     unsigned char *q;
     if (x < 0 || y < 0 || x >= w || y >= h)
@@ -93,8 +92,8 @@ int ee_radar_draw(unsigned char *pixels, int w, int h, const EEAffinity *state) 
     for (i = 0; i < 5; ++i) {
         axis[i].x = center.x + ux[i] * radius / 1000;
         axis[i].y = center.y + uy[i] * radius / 1000;
-        polygon[i].x = center.x + ux[i] * radius * state->rates[ring_order[i]] / 100000;
-        polygon[i].y = center.y + uy[i] * radius * state->rates[ring_order[i]] / 100000;
+        polygon[i].x = center.x + ux[i] * radius * state->rates[ee_affinity_ring_order[i]] / 100000;
+        polygon[i].y = center.y + uy[i] * radius * state->rates[ee_affinity_ring_order[i]] / 100000;
     }
     for (i = 0; i < 5; ++i)
         triangle(pixels, w, h, center, polygon[i], polygon[(i + 1) % 5], 0x7d9b83ffu);
@@ -117,8 +116,9 @@ int ee_radar_draw(unsigned char *pixels, int w, int h, const EEAffinity *state) 
                         h,
                         polygon[i].x + x,
                         polygon[i].y + y,
-                        (state->selected == (unsigned int)(ring_order[i] + 1)) ? 0x9a351fffU
-                                                                               : 0x493322ffu);
+                        (state->selected == (unsigned int)(ee_affinity_ring_order[i] + 1))
+                            ? 0x9a351fffU
+                            : 0x493322ffu);
     }
     return 1;
 }

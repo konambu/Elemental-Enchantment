@@ -1,4 +1,4 @@
-/* Private, opt-in Ogre ribbon test. Caller holds the render guard. */
+/* Weapon trails use Ogre ribbons. Caller holds the render guard. */
 typedef struct EETrailColour {
     float r, g, b, a;
 } EETrailColour;
@@ -29,7 +29,7 @@ static int trail_resolve(MODULE ogre) {
                       trail_get_material;
     return trail_supported;
 }
-static void trail_drop(Entry *e) {
+static void trail_drop(EEWeaponVisual *e) {
     if (e->ribbon && e->ribbon_node && e->trail_linked)
         trail_remove(e->ribbon, e->ribbon_node);
     if (e->ribbon && e->ribbon_root && e->trail_attached)
@@ -46,11 +46,11 @@ static void trail_drop(Entry *e) {
     e->trail_linked = 0;
     e->trail_attached = 0;
 }
-static void trail_cleanup(Entry *e) {
+static void trail_cleanup(EEWeaponVisual *e) {
     trail_drop(e);
     e->trail_has_direction = 0;
 }
-static int trail_start(Entry *e, int element, const Vec *initial_tip) {
+static int trail_start(EEWeaponVisual *e, int element, const Vec *initial_tip) {
     void **vtable;
     EETrailColour color;
     Vec derived;
@@ -120,7 +120,7 @@ static int trail_start(Entry *e, int element, const Vec *initial_tip) {
     e->trail_element = element;
     return 1;
 }
-static void trail_tick(Entry *e, const Vec *p, const Quat *q, float dt) {
+static void trail_tick(EEWeaponVisual *e, const Vec *p, const Quat *q, float dt) {
     float length = e->length * .98f - 5.0f,
           center = (e->length * (e->pole ? .45f : .12f) + e->length * .98f) * .5f - 5.0f, dx, dy,
           dz, threshold;
@@ -163,7 +163,7 @@ static void trail_tick(Entry *e, const Vec *p, const Quat *q, float dt) {
         node_rotation(e->ribbon_node, q->w, q->x, q->y, q->z);
     }
 }
-static void trail_finish(Entry *e, float dt) {
+static void trail_finish(EEWeaponVisual *e, float dt) {
     /* Stop recording movement at the end of an attack, but let existing
      * segments fade
      * naturally instead of destroying them on the same frame. */

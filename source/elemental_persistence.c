@@ -9,6 +9,15 @@ static int local_read(void *c, int out[3]) {
         out[i] = x->values[i];
     return 1;
 }
+/* A reused stats pointer must not retain data staged by an earlier load. */
+static void forget_pending(EEPersistence *p, void *stats) {
+    int i;
+    if (!p || !stats)
+        return;
+    for (i = 0; i < EE_PENDING_LIMIT; ++i)
+        if (p->pending[i].stats == stats)
+            p->pending[i].stats = 0;
+}
 void ee_persistence_init(EEPersistence *p) {
     int i;
     if (!p)
@@ -18,13 +27,15 @@ void ee_persistence_init(EEPersistence *p) {
         p->pending[i].stats = 0;
 }
 int ee_persistence_stage(EEPersistence *p, void *stats, const EESaveBackend *backend) {
-    int values[3], status, i, slot = -1;
+    int values[3], status, i, unsupported, slot = -1;
     EEAffinity check;
     if (!p || !stats || !backend || !backend->read)
         return EE_SAVE_ERROR;
     status = backend->read(backend->context, values);
-    if (!status)
+    if (!status) {
+        forget_pending(p, stats);
         return EE_SAVE_MISSING;
+    }
     /* Preserve a guarded record even when an existing custom field could not
      * be read. Later
      * character binding must not silently invent writable data. */
@@ -46,10 +57,10 @@ int ee_persistence_stage(EEPersistence *p, void *stats, const EESaveBackend *bac
     p->pending[slot].stats = stats;
     for (i = 0; i < 3; ++i)
         p->pending[slot].values[i] = values[i];
-    p->pending[slot].unsupported = !ee_affinity_decode(&check, values);
+    unsupported = !ee_affinity_decode(&check, values);
     if (status < 0)
         return EE_SAVE_ERROR;
-    return p->pending[slot].unsupported ? EE_SAVE_UNSUPPORTED : EE_SAVE_OK;
+    return unsupported ? EE_SAVE_UNSUPPORTED : EE_SAVE_OK;
 }
 EECharacterRecord *ee_persistence_bind(EEPersistence *p,
                                        void *stats,
@@ -57,7 +68,7 @@ EECharacterRecord *ee_persistence_bind(EEPersistence *p,
                                        unsigned int index,
                                        unsigned int serial,
                                        unsigned int seed,
-                                       unsigned int trial) {
+                                       unsigned int initial_element) {
     int i;
     EECharacterRecord *r;
     if (!p || !character)
@@ -79,7 +90,7 @@ EECharacterRecord *ee_persistence_bind(EEPersistence *p,
                 p->pending[i].stats = 0;
                 break;
             }
-    r = ee_character_observe(&p->characters, character, index, serial, seed, trial);
+    r = ee_character_observe(&p->characters, character, index, serial, seed, initial_element);
     return r;
 }
 int ee_persistence_save(EEPersistence *p,
@@ -90,12 +101,8 @@ int ee_persistence_save(EEPersistence *p,
     return p ? ee_character_save(&p->characters, character, index, serial, backend) : EE_SAVE_ERROR;
 }
 void ee_persistence_forget(EEPersistence *p, void *stats, void *character) {
-    int i;
     if (!p)
         return;
     ee_character_forget(&p->characters, character);
-    if (stats)
-        for (i = 0; i < EE_PENDING_LIMIT; ++i)
-            if (p->pending[i].stats == stats)
-                p->pending[i].stats = 0;
+    forget_pending(p, stats);
 }

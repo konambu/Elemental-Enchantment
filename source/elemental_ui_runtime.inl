@@ -1,4 +1,4 @@
-/* Experimental native UI. All UI methods run from MyGUI / stats-window hooks.
+/* Native UI. All UI methods run from MyGUI / stats-window hooks.
  * The host hooks window clear/destruction before the native children die. */
 #define EE_UI_WINDOWS 16
 typedef struct EEStatsView {
@@ -265,10 +265,12 @@ static unsigned char mouse_press_hook(void *input, int x, int y, int button) {
                                                              0,
                                                              element);
                                     if (r)
-                                        for (k = 0; k < EE_ALLY_LIMIT; ++k)
-                                            if (allies[k].character == character) {
-                                                allies[k].element = (int)r->affinity.selected;
-                                                allies[k].secondary = (int)r->affinity.secondary;
+                                        for (k = 0; k < EE_TRACKED_ACTOR_LIMIT; ++k)
+                                            if (tracked_actors[k].character == character) {
+                                                tracked_actors[k].element =
+                                                    (int)r->affinity.selected;
+                                                tracked_actors[k].secondary =
+                                                    (int)r->affinity.secondary;
                                                 break;
                                             }
                                 }

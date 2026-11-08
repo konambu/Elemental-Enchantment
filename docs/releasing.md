@@ -41,7 +41,14 @@ if ($builtHash -ne $stagedHash) { throw 'Staged DLL does not match the build.' }
 
 The two SHA256 values should match. `robocopy /E` copies the project package into Kenshi without deleting extra files already in the local mod folder.
 
-`python .\build.py --test` builds a separate DLL with native test helpers. It does not run a test suite and should not be copied into the Workshop package. `--frost-dev` and `--ice-experimental` build development variants; do not publish those as the normal plugin.
+To run the engine-independent native checks, build a separate test DLL and run the check runner:
+
+```powershell
+python .\build.py --test
+python .\tools\run_native_checks.py
+```
+
+The test DLL is separate from the normal plugin and should not be copied into the Workshop package. These checks do not replace in-game verification. `--frost-dev` and `--ice-experimental` build development variants; do not publish those as the normal plugin.
 
 ## Review and push source
 
@@ -49,7 +56,7 @@ The two SHA256 values should match. `robocopy /E` copies the project package int
 git diff --check
 git status --short
 git diff --stat
-git add .gitignore Doxyfile README.md build.py docs source mod
+git add .clang-format .gitignore Doxyfile README.md build.py docs source tools mod
 git commit -m "Describe the change"
 git push origin main
 ```

@@ -1,5 +1,20 @@
 /* Experimental: caller holds guard when modifying visual records. */
 #define CB_LIMIT 64
+/* Ranged combat fields for the executable checked before these hooks install. */
+enum {
+    CB_STATE_RELOADING = 2,
+    CB_GUN_OFFSET = 0x28,
+    CB_CHARACTER_OFFSET = 0x68,
+    CB_RELOAD_DURATION_OFFSET = 0x74,
+    CB_RELOAD_REMAINING_OFFSET = 0x78,
+    CB_GUN_ROTATION_OFFSET = 0xf0,
+    CB_PROJECTILE_OWNER_INDEX_OFFSET = 0x34,
+    CB_PROJECTILE_OWNER_SERIAL_OFFSET = 0x38,
+    CB_PROJECTILE_SPEED_OFFSET = 0x44,
+    CB_PROJECTILE_NODE_OFFSET = 0x58,
+    CB_HANDLE_INDEX_OFFSET = 0x14,
+    CB_HANDLE_SERIAL_OFFSET = 0x18
+};
 typedef struct {
     void *character;
     void *scene;
@@ -148,21 +163,21 @@ static void cb_apply_wind_reload(void *ranged, float dt) {
     if (!active || !ranged || !(dt > 0.0f && dt < 1.0f) || internal == GetCurrentThreadId())
         return;
     __try {
-        if (*(int *)ranged != 2)
+        if (*(int *)ranged != CB_STATE_RELOADING)
             return;
-        actor = *(void **)((unsigned char *)ranged + 0x68);
+        actor = *(void **)((unsigned char *)ranged + CB_CHARACTER_OFFSET);
         if (!actor)
             return;
-        timer = (float *)((unsigned char *)ranged + 0x78);
-        max = *(float *)((unsigned char *)ranged + 0x74);
+        timer = (float *)((unsigned char *)ranged + CB_RELOAD_REMAINING_OFFSET);
+        max = *(float *)((unsigned char *)ranged + CB_RELOAD_DURATION_OFFSET);
         old = *timer;
         if (!(max > .001f && max < 1000.0f && old > 0.0f && old <= max + .01f))
             return;
         AcquireSRWLockExclusive(&guard);
         __try {
-            for (i = 0; i < EE_ALLY_LIMIT; ++i)
-                if (allies[i].character == actor &&
-                    (allies[i].element == 3 || allies[i].secondary == 3)) {
+            for (i = 0; i < EE_TRACKED_ACTOR_LIMIT; ++i)
+                if (tracked_actors[i].character == actor &&
+                    (tracked_actors[i].element == 3 || tracked_actors[i].secondary == 3)) {
                     eligible = 1;
                     break;
                 }
@@ -188,13 +203,14 @@ static void cb_update_hook(void *ranged, float dt, const void *target, const voi
     if (!active || !ranged || internal == GetCurrentThreadId())
         return;
     __try {
-        actor = *(void **)((unsigned char *)ranged + 0x68);
-        gun = *(void **)((unsigned char *)ranged + 0x28);
+        actor = *(void **)((unsigned char *)ranged + CB_CHARACTER_OFFSET);
+        gun = *(void **)((unsigned char *)ranged + CB_GUN_OFFSET);
         state = *(int *)ranged;
-        timer = *(float *)((unsigned char *)ranged + 0x78);
-        max = *(float *)((unsigned char *)ranged + 0x74);
-        if (!actor || !gun || !character_is_player(actor) || state > 2 || state < 0 ||
-            !(max > .001f && max < 1000.0f) || !(timer >= 0.0f && timer <= max) || !cb_barrel)
+        timer = *(float *)((unsigned char *)ranged + CB_RELOAD_REMAINING_OFFSET);
+        max = *(float *)((unsigned char *)ranged + CB_RELOAD_DURATION_OFFSET);
+        if (!actor || !gun || !character_is_player(actor) || state > CB_STATE_RELOADING ||
+            state < 0 || !(max > .001f && max < 1000.0f) || !(timer >= 0.0f && timer <= max) ||
+            !cb_barrel)
             return;
         progress = 1.0f - timer / max;
         if (progress < 0)
@@ -207,7 +223,7 @@ static void cb_update_hook(void *ranged, float dt, const void *target, const voi
               barrel.y < 1000000 && barrel.z > -1000000 && barrel.z < 1000000))
             return;
         __try {
-            Quat q = *(Quat *)((unsigned char *)gun + 0xf0);
+            Quat q = *(Quat *)((unsigned char *)gun + CB_GUN_ROTATION_OFFSET);
             float q2 = q.w * q.w + q.x * q.x + q.y * q.y + q.z * q.z;
             if (q2 > .01f && q2 < 4.0f) {
                 aim = q;
@@ -248,23 +264,24 @@ static void cb_trace_hook(void *projectile, const Vec *pos, const Vec *direction
     if (!active || !projectile || internal == GetCurrentThreadId())
         return;
     __try {
-        index = *(unsigned *)((unsigned char *)projectile + 0x34);
-        serial_number = *(unsigned *)((unsigned char *)projectile + 0x38);
-        node = *(void **)((unsigned char *)projectile + 0x58);
+        index = *(unsigned *)((unsigned char *)projectile + CB_PROJECTILE_OWNER_INDEX_OFFSET);
+        serial_number =
+            *(unsigned *)((unsigned char *)projectile + CB_PROJECTILE_OWNER_SERIAL_OFFSET);
+        node = *(void **)((unsigned char *)projectile + CB_PROJECTILE_NODE_OFFSET);
         if (!node)
             return;
         AcquireSRWLockExclusive(&guard);
         internal = GetCurrentThreadId();
         __try {
-            for (i = 0; i < EE_ALLY_LIMIT; ++i)
-                if (allies[i].character && allies[i].element) {
+            for (i = 0; i < EE_TRACKED_ACTOR_LIMIT; ++i)
+                if (tracked_actors[i].character && tracked_actors[i].element) {
                     const unsigned char *h =
-                        (const unsigned char *)character_handle(allies[i].character);
-                    if (h && *(unsigned *)(h + 0x14) == index &&
-                        *(unsigned *)(h + 0x18) == serial_number)
+                        (const unsigned char *)character_handle(tracked_actors[i].character);
+                    if (h && *(unsigned *)(h + CB_HANDLE_INDEX_OFFSET) == index &&
+                        *(unsigned *)(h + CB_HANDLE_SERIAL_OFFSET) == serial_number)
                         break;
                 }
-            if (i < EE_ALLY_LIMIT) {
+            if (i < EE_TRACKED_ACTOR_LIMIT) {
                 for (j = 0; j < CB_LIMIT; ++j) {
                     if (cb_flights[j].projectile == projectile) {
                         cb_clear_flight(&cb_flights[j]);
@@ -287,8 +304,8 @@ static void cb_trace_hook(void *projectile, const Vec *pos, const Vec *direction
                             cb_shots[j].serial == serial_number &&
                             cb_shots[j].sequence > f->shot_sequence)
                             f->shot_sequence = cb_shots[j].sequence;
-                    f->element = allies[i].element;
-                    f->secondary = allies[i].secondary;
+                    f->element = tracked_actors[i].element;
+                    f->secondary = tracked_actors[i].secondary;
                     f->previous = pos ? *pos : (Vec){0};
                 }
             }
@@ -326,9 +343,11 @@ static void cb_capture_created(CBShot *shot, int element, int secondary) {
     for (n = 0; n < shot->count; ++n)
         __try {
             void *projectile = shot->created[n];
-            void *node = *(void **)((unsigned char *)projectile + 0x58);
-            unsigned index = *(unsigned *)((unsigned char *)projectile + 0x34),
-                     serial_number = *(unsigned *)((unsigned char *)projectile + 0x38);
+            void *node = *(void **)((unsigned char *)projectile + CB_PROJECTILE_NODE_OFFSET);
+            unsigned index = *(unsigned *)((unsigned char *)projectile +
+                                           CB_PROJECTILE_OWNER_INDEX_OFFSET),
+                     serial_number = *(unsigned *)((unsigned char *)projectile +
+                                                   CB_PROJECTILE_OWNER_SERIAL_OFFSET);
             if (!node || index != shot->index || serial_number != shot->serial)
                 continue;
             for (i = 0; i < CB_LIMIT; ++i)
@@ -355,8 +374,8 @@ static void cb_capture_created(CBShot *shot, int element, int secondary) {
                     if (cb_charges[j].character && GetTickCount64() - cb_charges[j].sample < 500) {
                         const unsigned char *h =
                             (const unsigned char *)character_handle(cb_charges[j].character);
-                        if (h && *(unsigned *)(h + 0x14) == index &&
-                            *(unsigned *)(h + 0x18) == serial_number) {
+                        if (h && *(unsigned *)(h + CB_HANDLE_INDEX_OFFSET) == index &&
+                            *(unsigned *)(h + CB_HANDLE_SERIAL_OFFSET) == serial_number) {
                             f->origin = cb_charges[j].position;
                             f->origin.y -= 1.0f;
                             f->has_origin = 1;
@@ -381,8 +400,8 @@ static void cb_shoot_hook(void *gun, void *actor, void *target, int stat, const 
                 const unsigned char *h = (const unsigned char *)character_handle(actor);
                 void *stats = character_stats(actor);
                 if (h && stats) {
-                    index = *(const unsigned *)(h + 0x14);
-                    serial_number = *(const unsigned *)(h + 0x18);
+                    index = *(const unsigned *)(h + CB_HANDLE_INDEX_OFFSET);
+                    serial_number = *(const unsigned *)(h + CB_HANDLE_SERIAL_OFFSET);
                     AcquireSRWLockExclusive(&guard);
                     __try {
                         EECharacterRecord *r =
@@ -426,10 +445,10 @@ static void cb_shoot_hook(void *gun, void *actor, void *target, int stat, const 
         AcquireSRWLockExclusive(&guard);
         __try {
             if (slot >= 0 && cb_shots[slot].sequence == sequence) {
-                for (i = 0; i < EE_ALLY_LIMIT; ++i)
-                    if (allies[i].character == actor) {
-                        element = allies[i].element;
-                        secondary = allies[i].secondary;
+                for (i = 0; i < EE_TRACKED_ACTOR_LIMIT; ++i)
+                    if (tracked_actors[i].character == actor) {
+                        element = tracked_actors[i].element;
+                        secondary = tracked_actors[i].secondary;
                         break;
                     }
                 if (element)
@@ -441,7 +460,8 @@ static void cb_shoot_hook(void *gun, void *actor, void *target, int stat, const 
                 for (i = 0; i < CB_LIMIT; ++i) {
                     CBFlight *f = &cb_flights[i];
                     if (f->projectile && !f->speed_done && f->shot_sequence == sequence) {
-                        float *velocity = (float *)((unsigned char *)f->projectile + 0x44);
+                        float *velocity =
+                            (float *)((unsigned char *)f->projectile + CB_PROJECTILE_SPEED_OFFSET);
                         __try {
                             if (*velocity > 0.0f && *velocity < 10000.0f) {
                                 *velocity *= speed;
@@ -517,15 +537,15 @@ static void cb_update_visuals_impl(void *manager, float dt) {
     const float bounds[6] = {0, 0, 0, 25, 25, 25};
     for (i = 0; i < CB_LIMIT; ++i) {
         CBCharge *c = &cb_charges[i];
-        Ally *a = 0;
+        EETrackedActor *a = 0;
         void *parent;
         float scale;
         Vec sz;
         if (!c->character)
             continue;
-        for (j = 0; j < EE_ALLY_LIMIT; ++j)
-            if (allies[j].character == c->character) {
-                a = &allies[j];
+        for (j = 0; j < EE_TRACKED_ACTOR_LIMIT; ++j)
+            if (tracked_actors[j].character == c->character) {
+                a = &tracked_actors[j];
                 break;
             }
         if (!a || !a->body || !a->element || now - c->sample > 500) {

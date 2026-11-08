@@ -22,7 +22,7 @@ void ee_ui_bind(EEUIModel *,
                 unsigned int serial,
                 const EEAffinity *,
                 int editable);
-/** @brief Toggle the panel's visibility; return the new visible state. */
+/** @brief Toggle the panel's visibility; return 1 on success, or 0 if unbound. */
 int ee_ui_toggle(EEUIModel *);
 /* Select validates view state and returns the desired value; the host must
  * commit it to its

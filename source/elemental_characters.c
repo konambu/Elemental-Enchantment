@@ -46,18 +46,18 @@ EECharacterRecord *ee_character_observe(EECharacters *c,
                                         unsigned int index,
                                         unsigned int serial,
                                         unsigned int seed,
-                                        unsigned int trial) {
+                                        unsigned int initial_element) {
     EECharacterRecord *r = lookup(c, ch, index, serial, 0);
     if (r)
         return r;
-    if (trial > 5)
+    if (initial_element > 5)
         return 0;
     r = lookup(c, ch, index, serial, 1);
     if (!r)
         return 0;
     if (new_record_seed)
         seed = new_record_seed(seed);
-    if (!ee_affinity_create(&r->affinity, seed, trial)) {
+    if (!ee_affinity_create(&r->affinity, seed, initial_element)) {
         clear(r);
         return 0;
     }

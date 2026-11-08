@@ -2,6 +2,9 @@
 #define ELEMENTAL_MYGUI_H
 #include "elemental_ui_view.h"
 #include "elemental_gamedata.h"
+/** @file elemental_mygui.h
+ * @brief Adapts resolved MyGUI functions to the Elemental Enchantment view.
+ */
 typedef struct EEMyGUICoord {
     int left, top, width, height;
 } EEMyGUICoord;
@@ -33,8 +36,6 @@ typedef struct EEMyGUI {
     unsigned int scale_tenths;
     unsigned int scale_x100, scale_y100;
 } EEMyGUI;
-/* Construct the generic view backend for the supplied resolved API. UI calls
- * must run on the
- * MyGUI thread. */
+/** @brief Construct a view backend; UI calls must run on the MyGUI thread. */
 void ee_mygui_backend(EEMyGUI *, EEUIViewAPI *);
 #endif

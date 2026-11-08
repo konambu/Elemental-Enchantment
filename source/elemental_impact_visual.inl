@@ -1,4 +1,4 @@
-/* Prototype impact bursts: queued on an acknowledged melee hit, rendered on
+/* Impact bursts: queued on an acknowledged hit, rendered on
  * the normal visual
  * update thread. A scene clear discards pending work. */
 #define EE_IMPACT_LIMIT 32

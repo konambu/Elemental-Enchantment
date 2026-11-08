@@ -1,9 +1,10 @@
 #include "elemental_ui_view.h"
 #include "elemental_localization.h"
-static const int ring_order[5] = {0, 2, 4, 3, 1};
-static unsigned int ui_view_scale_tenths = 10010010;
+static EEUIViewScale ui_view_scale = {100, 100, 10};
 void ee_ui_view_set_geometry_scale(unsigned int x, unsigned int y, unsigned int manual) {
-    ui_view_scale_tenths = x * 100000u + y * 100u + manual;
+    ui_view_scale.x = x;
+    ui_view_scale.y = y;
+    ui_view_scale.manual = manual;
 }
 void ee_ui_view_set_scale(unsigned int tenths) {
     tenths = tenths < 8 ? 8 : tenths > 20 ? 20 : tenths;
@@ -43,25 +44,10 @@ static void decimal(char *out, int cap, const char *label, unsigned value, int p
     if (percent)
         add(out, n, cap, "%");
 }
-static unsigned int ui_level(const EEAffinity *a) {
-    unsigned int lo = 0, hi = 100;
-    while (lo < hi) {
-        unsigned int mid = (lo + hi + 1u) / 2u;
-        if (a->xp[0] >= 4u * (20u * mid + mid * (mid - 1u)))
-            lo = mid;
-        else
-            hi = mid - 1u;
-    }
-    return lo;
-}
-static unsigned int ui_secondary_percent(unsigned int l) {
-    return l < 50 ? 0 : l < 60 ? 25 : l < 70 ? 35 : l < 80 ? 45 : l < 90 ? 55 : l < 100 ? 65 : 75;
-}
-static void selection_title(char out[256], const EEAffinity *a, int second_mode) {
+static void selection_title(char out[256], const EEAffinity *a) {
     const EELocale *l = ee_locale_get();
     int i = 0;
     unsigned e = a->selected;
-    (void)second_mode;
     i = add(out, i, 256, l->main);
     i = add(out, i, 256, "  ");
     i = add(out, i, 256, e <= 5 ? l->element[e] : l->element[0]);
@@ -69,7 +55,10 @@ static void selection_title(char out[256], const EEAffinity *a, int second_mode)
     i = add(out, i, 256, l->sub);
     i = add(out, i, 256, "  ");
     e = a->secondary;
-    add(out, i, 256, ui_level(a) < 50 ? l->locked : (e <= 5 ? l->element[e] : l->element[0]));
+    add(out,
+        i,
+        256,
+        ee_affinity_level(a, 0) < 50 ? l->locked : (e <= 5 ? l->element[e] : l->element[0]));
 }
 void ee_ui_view_init(EEUIView *v) {
     int i;
@@ -98,7 +87,9 @@ void ee_ui_view_init(EEUIView *v) {
     v->xp_percent = 0;
     v->second_mode = 0;
     v->graph_ready = 0;
-    v->built_scale_tenths = 0;
+    v->built_scale.x = 0;
+    v->built_scale.y = 0;
+    v->built_scale.manual = 0;
     for (i = 0; i < 5; ++i) {
         v->labels[i] = 0;
         v->axis_labels[i] = 0;
@@ -123,8 +114,8 @@ int ee_ui_view_build(EEUIView *v, const EEUIViewAPI *a, void *parent, int width,
     int i, x;
     if (!v || !valid(a) || !parent || width < 300 || height < 260)
         return 0;
-    if (v->parent == parent && v->opener && v->panel &&
-        v->built_scale_tenths == ui_view_scale_tenths)
+    if (v->parent == parent && v->opener && v->panel && v->built_scale.x == ui_view_scale.x &&
+        v->built_scale.y == ui_view_scale.y && v->built_scale.manual == ui_view_scale.manual)
         return 1;
     if (v->parent) {
         EEUIModel saved = v->model;
@@ -134,7 +125,9 @@ int ee_ui_view_build(EEUIView *v, const EEUIViewAPI *a, void *parent, int width,
         v->second_mode = mode;
     }
     v->parent = parent;
-    v->built_scale_tenths = ui_view_scale_tenths;
+    v->built_scale.x = ui_view_scale.x;
+    v->built_scale.y = ui_view_scale.y;
+    v->built_scale.manual = ui_view_scale.manual;
     x = width + 12;
     /* Place inside the unused area below the attributes list. The outer
      * window height includes borders and is not the child client height. */
@@ -170,7 +163,9 @@ int ee_ui_view_build(EEUIView *v, const EEUIViewAPI *a, void *parent, int width,
                                           22);
             if (!v->axis_labels[i])
                 goto fail;
-            a->caption(a->context, v->axis_labels[i], ee_locale_get()->element[ring_order[i] + 1]);
+            a->caption(a->context,
+                       v->axis_labels[i],
+                       ee_locale_get()->element[ee_affinity_ring_order[i] + 1]);
         }
     }
     for (i = 0; i < 5; ++i) {
@@ -227,43 +222,19 @@ static void level_text(char out[128], const EEAffinity *a) {
     int i = 0;
     i = add(out, i, 128, ee_locale_get()->elemental);
     i = add(out, i, 128, "   ");
-    num(out, i, 128, ui_level(a));
+    num(out, i, 128, ee_affinity_level(a, 0));
 }
-static unsigned int progress(char out[32], const EEAffinity *a) {
-    unsigned int n, level = 0, xp, base, need, pct;
-    int i = 0;
-    const char *p = "NEXT LEVEL ";
-    if (!a->selected || a->selected > 5) {
-        p = "CHOOSE ELEMENT";
-        while (*p)
-            out[i++] = *p++;
-        out[i] = 0;
+static unsigned int xp_progress_percent(const EEAffinity *a) {
+    unsigned int level, xp, base, need;
+    if (!a->selected || a->selected > 5)
         return 0;
-    }
     xp = a->xp[0];
-    while (level < 100) {
-        n = level + 1;
-        if (xp < 4u * (20u * n + n * (n - 1u)))
-            break;
-        ++level;
-    }
-    if (level == 100) {
-        p = "LEVEL MAX";
-        while (*p)
-            out[i++] = *p++;
-        out[i] = 0;
+    level = ee_affinity_level(a, 0);
+    if (level == EE_AFFINITY_MAX_LEVEL)
         return 100;
-    }
-    base = 4u * (20u * level + level * (level - 1u));
-    need = 4u * (20u + 2u * level);
-    pct = (xp - base) * 100u / need;
-    while (*p)
-        out[i++] = *p++;
-    out[i++] = (char)('0' + pct / 10);
-    out[i++] = (char)('0' + pct % 10);
-    out[i++] = '%';
-    out[i] = 0;
-    return pct;
+    base = ee_affinity_xp_for_level(level);
+    need = ee_affinity_xp_for_level(level + 1u) - base;
+    return (xp - base) * 100u / need;
 }
 static void effect_text(char out[256],
                         char detail_out[256],
@@ -271,7 +242,7 @@ static void effect_text(char out[256],
                         const EEAffinity *a,
                         unsigned int weight) {
     const EELocale *l = ee_locale_get();
-    unsigned int level = ui_level(a), value, e = a->selected;
+    unsigned int level = ee_affinity_level(a, 0), value, e = a->selected;
     weight *= ui_effect_tenths;
     if (!e || e > 5) {
         add(out, 0, 256, l->noelement);
@@ -329,7 +300,7 @@ __declspec(dllexport) int probeTestHalfEffectDisplay(void) {
     const char *detail;
     ee_locale_set("en_GB");
     ee_affinity_create(&a, 1, 1);
-    a.xp[0] = 47600;
+    a.xp[0] = EE_AFFINITY_MAX_XP;
     ee_ui_view_set_effect_multiplier(0.5f);
     effect_text(out, detail_out, &detail, &a, 100);
     if (!ui_test_has(out, "7.5%"))
@@ -414,11 +385,12 @@ void ee_ui_view_sync(EEUIView *v,
         return;
     {
         char next[256];
-        milestone_text(next, ui_level(&v->model.affinity));
+        milestone_text(next, ee_affinity_level(&v->model.affinity, 0));
         a->caption(a->context, v->milestone, next);
     }
     {
-        unsigned int level = ui_level(&v->model.affinity), pct = ui_secondary_percent(level);
+        unsigned int level = ee_affinity_level(&v->model.affinity, 0);
+        unsigned int pct = ee_affinity_secondary_percent(&v->model.affinity);
         char text[128], title[256];
         int j = 0;
         if (level < 50) {
@@ -435,12 +407,13 @@ void ee_ui_view_sync(EEUIView *v,
         a->caption(a->context, v->mode_second, text);
         a->selected(a->context, v->mode_main, !v->second_mode);
         a->selected(a->context, v->mode_second, v->second_mode);
-        selection_title(title, &v->model.affinity, v->second_mode);
+        selection_title(title, &v->model.affinity);
         a->caption(a->context, v->title, title);
     }
     {
         char text[128], number[8];
-        unsigned int pct = progress(text, &v->model.affinity), level = ui_level(&v->model.affinity);
+        unsigned int pct = xp_progress_percent(&v->model.affinity),
+                     level = ee_affinity_level(&v->model.affinity, 0);
         int n = 0;
         a->progress(a->context, v->fill, pct);
         level_text(text, &v->model.affinity);
@@ -461,7 +434,7 @@ void ee_ui_view_sync(EEUIView *v,
         char text[256], detail_buf[256];
         const char *detail;
         EEAffinity shown = v->model.affinity;
-        unsigned int weight = v->second_mode ? ui_secondary_percent(ui_level(&shown)) : 100;
+        unsigned int weight = v->second_mode ? ee_affinity_secondary_percent(&shown) : 100;
         if (v->second_mode)
             shown.selected = shown.secondary;
         effect_text(text, detail_buf, &detail, &shown, weight);
@@ -514,7 +487,7 @@ int ee_ui_view_click(EEUIView *v, const EEUIViewAPI *a, void *widget) {
         return 0;
     }
     if (widget == v->mode_second && v->model.visible) {
-        if (ui_level(&v->model.affinity) >= 50)
+        if (ee_affinity_level(&v->model.affinity, 0) >= 50)
             v->second_mode = 1;
         return 0;
     }

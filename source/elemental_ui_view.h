@@ -31,6 +31,12 @@ enum {
     EE_UI_BAR_TEXT = 13,
     EE_UI_OPENER = 14
 };
+/** Geometry and manual scale values used to build a view. */
+typedef struct EEUIViewScale {
+    unsigned int x;
+    unsigned int y;
+    unsigned int manual;
+} EEUIViewScale;
 typedef struct EEUIView {
     EEUIModel model;
     void *parent;
@@ -58,7 +64,7 @@ typedef struct EEUIView {
     void *xp_percent;
     int second_mode;
     int graph_ready;
-    unsigned int built_scale_tenths;
+    EEUIViewScale built_scale;
     EEAffinity graph_state;
 } EEUIView;
 void ee_ui_view_init(EEUIView *);

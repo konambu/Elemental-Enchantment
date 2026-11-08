@@ -9,7 +9,6 @@
 typedef struct EEPendingSave {
     void *stats;
     int values[3];
-    int unsupported;
 } EEPendingSave;
 typedef struct EEPersistence {
     EECharacters characters;
@@ -28,7 +27,7 @@ EECharacterRecord *ee_persistence_bind(EEPersistence *,
                                        unsigned int index,
                                        unsigned int serial,
                                        unsigned int seed,
-                                       unsigned int trial);
+                                       unsigned int initial_element);
 /** @brief Persist one character's writable affinity record. */
 int ee_persistence_save(EEPersistence *,
                         void *character,

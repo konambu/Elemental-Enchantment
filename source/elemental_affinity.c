@@ -14,26 +14,26 @@ static unsigned int mix(unsigned int x) {
 
 /* Ring: fire -> wind -> ice -> water -> lightning -> fire.
  * Storage order remains fire, lightning, wind, water, ice. */
+const unsigned char ee_affinity_ring_order[EE_AFFINITY_COUNT] = {0, 2, 4, 3, 1};
 static void aptitude(EEAffinity *s, unsigned int primary, int all) {
-    static const int ring[5] = {0, 2, 4, 3, 1};
     int i, pos = 0;
     for (i = 0; i < 5; ++i)
-        if ((unsigned int)ring[i] == primary)
+        if ((unsigned int)ee_affinity_ring_order[i] == primary)
             pos = i;
     for (i = 0; i < 5; ++i)
         s->rates[i] = (unsigned char)(all ? 100 : 60);
     if (!all) {
-        s->rates[ring[pos]] = 100;
-        s->rates[ring[(pos + 1) % 5]] = 80;
-        s->rates[ring[(pos + 4) % 5]] = 80;
+        s->rates[ee_affinity_ring_order[pos]] = 100;
+        s->rates[ee_affinity_ring_order[(pos + 1) % 5]] = 80;
+        s->rates[ee_affinity_ring_order[(pos + 4) % 5]] = 80;
     }
 }
 
-int ee_affinity_create(EEAffinity *s, unsigned int seed, unsigned int trial_element) {
+int ee_affinity_create(EEAffinity *s, unsigned int seed, unsigned int initial_element) {
     int i;
-    if (!s || trial_element > 5)
+    if (!s || initial_element > 5)
         return 0;
-    s->selected = trial_element;
+    s->selected = initial_element;
     s->secondary = 0;
     s->xp_fraction = 0;
     for (i = 0; i < 5; ++i)
@@ -61,14 +61,19 @@ unsigned int ee_affinity_secondary_percent(const EEAffinity *s) {
     unsigned int l = ee_affinity_level(s, 0);
     return l < 50 ? 0 : l < 60 ? 25 : l < 70 ? 35 : l < 80 ? 45 : l < 90 ? 55 : l < 100 ? 65 : 75;
 }
+unsigned int ee_affinity_xp_for_level(unsigned int level) {
+    if (level > EE_AFFINITY_MAX_LEVEL)
+        level = EE_AFFINITY_MAX_LEVEL;
+    return 4u * (20u * level + level * (level - 1u));
+}
 unsigned int ee_affinity_level(const EEAffinity *s, unsigned int element) {
-    unsigned int lo = 0, hi = 100, total;
+    unsigned int lo = 0, hi = EE_AFFINITY_MAX_LEVEL, total;
     if (!s || element >= 5)
         return 0;
     total = s->xp[0];
     while (lo < hi) {
         unsigned int mid = (lo + hi + 1u) / 2u;
-        if (total >= 4u * (20u * mid + mid * (mid - 1u)))
+        if (total >= ee_affinity_xp_for_level(mid))
             lo = mid;
         else
             hi = mid - 1u;
@@ -86,8 +91,8 @@ int ee_affinity_award_hit_rate_scaled(EEAffinity *s, int all_aptitudes, unsigned
         s->xp_fraction;
     total = (unsigned int)s->xp[0] + amount / 100u;
     s->xp_fraction = amount % 100u;
-    if (total >= 47600u) {
-        total = 47600u;
+    if (total >= EE_AFFINITY_MAX_XP) {
+        total = EE_AFFINITY_MAX_XP;
         s->xp_fraction = 0;
     }
     s->xp[0] = (unsigned short)total;
@@ -184,7 +189,7 @@ float ee_affinity_attack_speed_scaled(const EEAffinity *s, float speed, float mu
 int ee_affinity_encode(const EEAffinity *s, int out[3]) {
     unsigned int code = 5;
     int i, j, all = 1;
-    if (!s || !out || s->selected > 5 || s->secondary > 5 || s->xp[0] > 47600u ||
+    if (!s || !out || s->selected > 5 || s->secondary > 5 || s->xp[0] > EE_AFFINITY_MAX_XP ||
         s->xp_fraction >= 100u || s->secondary == s->selected && s->secondary ||
         s->secondary && (!s->selected || ee_affinity_level(s, 0) < 50))
         return 0;
@@ -227,7 +232,7 @@ int ee_affinity_decode(EEAffinity *s, const int in[3]) {
         tmp.secondary = (meta >> 16) & 7u;
         tmp.xp_fraction = (unsigned int)in[2];
         if ((meta & 0xfff80000u) || code > 5 || tmp.selected > 5 || tmp.secondary > 5 ||
-            packed > 47600u || tmp.xp_fraction >= 100u)
+            packed > EE_AFFINITY_MAX_XP || tmp.xp_fraction >= 100u)
             return 0;
         aptitude(&tmp, code == 5 ? 0 : code, code == 5);
         tmp.xp[0] = (unsigned short)packed;
@@ -251,7 +256,7 @@ int ee_affinity_decode(EEAffinity *s, const int in[3]) {
         tmp.xp[3] = (unsigned short)(unsigned int)in[2];
         tmp.xp[4] = (unsigned short)((unsigned int)in[2] >> 16);
         for (i = 0; i < 5; ++i) {
-            if (tmp.xp[i] > 47600u)
+            if (tmp.xp[i] > EE_AFFINITY_MAX_XP)
                 return 0;
             if (tmp.xp[i] > highest)
                 highest = tmp.xp[i];

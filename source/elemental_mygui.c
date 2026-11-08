@@ -1,19 +1,12 @@
 #include "elemental_mygui.h"
 #include "elemental_radar.h"
-static void str(EEGameString *s, const char *p) {
-    unsigned long long n = 0, i;
+static void make_game_string(EEGameString *s, const char *p) {
+    unsigned long long n = 0;
     while (p[n])
         ++n;
-    s->size = n;
-    s->capacity = n < 16 ? 15 : n;
-    s->allocator = 0;
-    if (n < 16)
-        for (i = 0; i <= n; ++i)
-            s->text.small[i] = p[i];
-    else
-        s->text.heap = p;
+    ee_game_string_init(s, p, n, n < 16 ? 15 : n);
 }
-static void *make(void *c, void *parent, int kind, int x, int y, int w, int h) {
+static void *create_view_widget(void *c, void *parent, int kind, int x, int y, int w, int h) {
     EEMyGUI *a = (EEMyGUI *)c;
     EEGameString type, skin, name, font;
     EEMyGUICoord rect = {x, y, w, h};
@@ -41,55 +34,55 @@ static void *make(void *c, void *parent, int kind, int x, int y, int w, int h) {
         rect.height = (h * (int)sy + 50) / 100;
     }
     if (kind == EE_UI_PANEL) {
-        str(&type, "Widget");
-        str(&skin, "PanelEmpty");
+        make_game_string(&type, "Widget");
+        make_game_string(&skin, "PanelEmpty");
     } else if (kind == EE_UI_BUTTON || kind == EE_UI_OPENER) {
-        str(&type, "Button");
-        str(&skin, "Kenshi_Button1Skin");
+        make_game_string(&type, "Button");
+        make_game_string(&skin, "Kenshi_Button1Skin");
     } else if (kind == EE_UI_LABEL) {
-        str(&type, "TextBox");
-        str(&skin, "Kenshi_TextboxStandardText");
+        make_game_string(&type, "TextBox");
+        make_game_string(&skin, "Kenshi_TextboxStandardText");
     } else if (kind == EE_UI_AXIS_LABEL || kind == EE_UI_BAR_TEXT) {
-        str(&type, "TextBox");
-        str(&skin, "Kenshi_TextBoxEmptySkin");
+        make_game_string(&type, "TextBox");
+        make_game_string(&skin, "Kenshi_TextBoxEmptySkin");
     } else if (kind == EE_UI_RADAR) {
-        str(&type, "Canvas");
-        str(&skin, "Canvas");
+        make_game_string(&type, "Canvas");
+        make_game_string(&skin, "Canvas");
     } else if (kind == EE_UI_BAR_BG) {
-        str(&type, "Widget");
-        str(&skin, "Kenshi_ProgressBarEmptySkin");
+        make_game_string(&type, "Widget");
+        make_game_string(&skin, "Kenshi_ProgressBarEmptySkin");
     } else if (kind == EE_UI_BAR_FILL) {
-        str(&type, "Widget");
-        str(&skin, "Kenshi_ProgressBarFilledSkin");
+        make_game_string(&type, "Widget");
+        make_game_string(&skin, "Kenshi_ProgressBarFilledSkin");
     } else if (kind == EE_UI_WINDOW_BODY) {
-        str(&type, "Widget");
-        str(&skin, "Kenshi_GenericWindowSkin");
+        make_game_string(&type, "Widget");
+        make_game_string(&skin, "Kenshi_GenericWindowSkin");
     } else if (kind == EE_UI_PAPER) {
-        str(&type, "Widget");
-        str(&skin, "Kenshi_GenericTextBoxSkin");
+        make_game_string(&type, "Widget");
+        make_game_string(&skin, "Kenshi_GenericTextBoxSkin");
     } else if (kind == EE_UI_WINDOW_HEADER) {
-        str(&type, "Widget");
-        str(&skin, "Kenshi_GenericWindowHeaderSkin");
+        make_game_string(&type, "Widget");
+        make_game_string(&skin, "Kenshi_GenericWindowHeaderSkin");
     } else if (kind == EE_UI_WINDOW_TITLE) {
-        str(&type, "TextBox");
-        str(&skin, "Kenshi_TextBoxEmptySkin");
+        make_game_string(&type, "TextBox");
+        make_game_string(&skin, "Kenshi_TextBoxEmptySkin");
     } else if (kind == EE_UI_WINDOW_CLOSE) {
-        str(&type, "Button");
-        str(&skin, "Kenshi_CloseButtonSkin");
+        make_game_string(&type, "Button");
+        make_game_string(&skin, "Kenshi_CloseButtonSkin");
     } else
         return 0;
-    str(&name, "");
+    make_game_string(&name, "");
     widget = a->create_widget(parent, &type, &skin, &rect, 10, &name);
     /* A popup retains its parent lifecycle while escaping its clipping area. */
     if (widget && a->set_style && kind == EE_UI_PANEL) {
         EEGameString layer;
-        str(&layer, "Popup");
+        make_game_string(&layer, "Popup");
         a->set_style(widget, 1, &layer);
     }
     if (widget && a->set_font &&
         (kind == EE_UI_BUTTON || kind == EE_UI_OPENER || kind == EE_UI_LABEL ||
          kind == EE_UI_AXIS_LABEL || kind == EE_UI_BAR_TEXT || kind == EE_UI_WINDOW_TITLE)) {
-        str(&font, "Kenshi_PaintedTextFont_Medium");
+        make_game_string(&font, "Kenshi_PaintedTextFont_Medium");
         a->set_font(widget, &font);
         if (kind != EE_UI_OPENER && scale != 10 && a->get_font_height && a->set_font_height) {
             int size = a->get_font_height(widget);
@@ -99,29 +92,29 @@ static void *make(void *c, void *parent, int kind, int x, int y, int w, int h) {
     }
     if (widget && a->set_property && kind == EE_UI_AXIS_LABEL) {
         EEGameString key, value;
-        str(&key, "TextColour");
-        str(&value, "0.0784314 0.0313726 0.0235294");
+        make_game_string(&key, "TextColour");
+        make_game_string(&value, "0.0784314 0.0313726 0.0235294");
         a->set_property(widget, &key, &value);
     }
     if (widget && a->set_property && kind == EE_UI_BAR_TEXT) {
         EEGameString key, value;
-        str(&key, "TextColour");
-        str(&value, "0.90 0.86 0.76");
+        make_game_string(&key, "TextColour");
+        make_game_string(&value, "0.90 0.86 0.76");
         a->set_property(widget, &key, &value);
     }
     if (widget && a->set_property && (kind == EE_UI_BUTTON || kind == EE_UI_OPENER)) {
         EEGameString key, value;
-        str(&key, "TextAlign");
-        str(&value, "Center");
+        make_game_string(&key, "TextAlign");
+        make_game_string(&value, "Center");
         a->set_property(widget, &key, &value);
     }
     if (widget && a->set_property && kind == EE_UI_WINDOW_TITLE) {
         EEGameString key, value;
-        str(&key, "TextColour");
-        str(&value, "0.78 0.72 0.62");
+        make_game_string(&key, "TextColour");
+        make_game_string(&value, "0.78 0.72 0.62");
         a->set_property(widget, &key, &value);
-        str(&key, "TextAlign");
-        str(&value, "Center");
+        make_game_string(&key, "TextAlign");
+        make_game_string(&value, "Center");
         a->set_property(widget, &key, &value);
     }
     return widget;
@@ -135,25 +128,25 @@ static void remove_widget(void *c, void *widget) {
     if (gui)
         a->destroy_widget(gui, widget);
 }
-static void visible(void *c, void *widget, int show) {
+static void set_view_visible(void *c, void *widget, int show) {
     EEMyGUI *a = (EEMyGUI *)c;
     if (a && a->set_visible && widget)
         a->set_visible(widget, (unsigned char)(show != 0));
 }
-static void caption(void *c, void *widget, const char *text) {
+static void set_view_caption(void *c, void *widget, const char *text) {
     EEMyGUI *a = (EEMyGUI *)c;
     EEGameString value;
     if (!a || !a->set_caption || !widget || !text)
         return;
-    str(&value, text);
+    make_game_string(&value, text);
     a->set_caption(widget, &value);
 }
-static void selected(void *c, void *widget, int on) {
+static void set_view_selected(void *c, void *widget, int on) {
     EEMyGUI *a = (EEMyGUI *)c;
     if (a && a->set_selected && widget)
         a->set_selected(widget, (unsigned char)(on != 0));
 }
-static void progress(void *c, void *widget, unsigned int pct) {
+static void set_view_progress(void *c, void *widget, unsigned int pct) {
     EEMyGUI *a = (EEMyGUI *)c;
     unsigned int scale, sx, sy;
     if (!a || !widget || !a->set_size || !a->set_visible)
@@ -167,7 +160,7 @@ static void progress(void *c, void *widget, unsigned int pct) {
     if (pct)
         a->set_size(widget, (int)(490u * sx * pct / 10000u), (int)((14u * sy + 50u) / 100u));
 }
-static int radar(void *c, void *widget, const EEAffinity *affinity) {
+static int draw_view_radar(void *c, void *widget, const EEAffinity *affinity) {
     EEMyGUI *a = (EEMyGUI *)c;
     unsigned char *pixels;
     int ok;
@@ -197,11 +190,11 @@ void ee_mygui_backend(EEMyGUI *a, EEUIViewAPI *out) {
     if (!out)
         return;
     out->context = a;
-    out->create = make;
+    out->create = create_view_widget;
     out->destroy = remove_widget;
-    out->visible = visible;
-    out->caption = caption;
-    out->selected = selected;
-    out->radar = radar;
-    out->progress = progress;
+    out->visible = set_view_visible;
+    out->caption = set_view_caption;
+    out->selected = set_view_selected;
+    out->radar = draw_view_radar;
+    out->progress = set_view_progress;
 }
