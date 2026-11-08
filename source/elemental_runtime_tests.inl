@@ -1471,6 +1471,23 @@ __declspec(dllexport) int probeTestMeleeContext(int category, int ranged) {
     test_ranged_mode = ranged;
     return melee_context((void *)1);
 }
+__declspec(dllexport) int probeCheckMeleeContexts(void) {
+    int category, ranged;
+    for (ranged = 0; ranged <= 1; ++ranged) {
+        if (probeTestMeleeContext(-1, ranged) != (ranged ? 0 : 1) ||
+            probeTestMeleeContext(5, ranged) != (ranged ? 0 : 1))
+            return 1;
+        for (category = 0; category <= 4; ++category)
+            if (probeTestMeleeContext(category, ranged) != 2)
+                return 2;
+        if (probeTestMeleeContext(8, ranged) != 2 ||
+            probeTestMeleeContext(6, ranged) != 0 ||
+            probeTestMeleeContext(7, ranged) != 0 ||
+            probeTestMeleeContext(9, ranged) != 0)
+            return 3;
+    }
+    return 0;
+}
 __declspec(dllexport) void probeTestHands(void *owner, void *left, void *right, int enabled) {
     track_actor((void *)1, owner, 1, left, right, enabled, 1);
 }

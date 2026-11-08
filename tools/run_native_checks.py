@@ -32,6 +32,7 @@ CHECKS = (
     "probeTestImpactQueue",
     "probeTestImpactSetting",
     "probeCheckVisualStages",
+    "probeCheckMeleeContexts",
     "probeTestMcmRegistration",
     "probeTestAllyHistoryFilter",
     "probeTestBossProfileLookup",
