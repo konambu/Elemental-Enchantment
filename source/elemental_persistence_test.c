@@ -69,5 +69,24 @@ __declspec(dllexport) int ee_run_persistence_tests(void) {
     mock.write_status = 1;
     if (ee_save_store(&backend, &saved) != EE_SAVE_OK || mock.writes != 2)
         return 10;
+    {
+        unsigned int i;
+        ee_persistence_init(&persistence);
+        record = ee_persistence_bind(&persistence, 0, character, 42, 7, 123, 2);
+        if (!record || !ee_affinity_encode(&saved, mock.values))
+            return 11;
+        mock.status = 1;
+        for (i = 0; i < EE_PENDING_LIMIT; ++i)
+            if (ee_persistence_stage(&persistence, (void *)(unsigned long long)(i + 100),
+                                     &backend) != EE_SAVE_OK)
+                return 12;
+        if (ee_persistence_stage(&persistence, (void *)99999, &backend) != EE_SAVE_ERROR ||
+            ee_persistence_bind(&persistence, (void *)99999, (void *)3, 43, 7, 123, 2) ||
+            ee_persistence_save(&persistence, character, 42, 7, &backend) != EE_SAVE_ERROR)
+            return 13;
+        ee_persistence_init(&persistence);
+        if (!ee_persistence_bind(&persistence, 0, character, 42, 7, 123, 2))
+            return 14;
+    }
     return 0;
 }

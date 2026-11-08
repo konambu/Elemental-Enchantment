@@ -1394,6 +1394,8 @@ static void stats_load_hook(void *stats, void *data) {
             }
             if (status == EE_SAVE_UNSUPPORTED)
                 logline("SAVE: unknown affinity version retained without changes.\r\n");
+            else if (status == EE_SAVE_ERROR)
+                logline("SAVE: affinity staging failed; preserving saved data.\r\n");
         } __except (1) {
             /* A fault while reading must not turn unknown saved data into a new,
              * writable default. Stage a read-only sentinel without touching data. */

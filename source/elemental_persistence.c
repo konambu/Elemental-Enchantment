@@ -23,6 +23,7 @@ void ee_persistence_init(EEPersistence *p) {
     if (!p)
         return;
     ee_characters_init(&p->characters);
+    p->stage_overflow = 0;
     for (i = 0; i < EE_PENDING_LIMIT; ++i)
         p->pending[i].stats = 0;
 }
@@ -51,8 +52,12 @@ int ee_persistence_stage(EEPersistence *p, void *stats, const EESaveBackend *bac
         if (slot < 0 && !p->pending[i].stats)
             slot = i;
     }
-    if (slot < 0)
+    if (slot < 0) {
+        /* Some loaded record cannot be retained. Fail closed for this session:
+         * a later bind must not invent state and overwrite its saved data. */
+        p->stage_overflow = 1;
         return EE_SAVE_ERROR;
+    }
     p->pending[slot].stats = stats;
     for (i = 0; i < 3; ++i)
         p->pending[slot].values[i] = values[i];
@@ -70,7 +75,7 @@ EECharacterRecord *ee_persistence_bind(EEPersistence *p,
                                        unsigned int initial_element) {
     int i;
     EECharacterRecord *r;
-    if (!p || !character)
+    if (!p || !character || p->stage_overflow)
         return 0;
     if (stats)
         for (i = 0; i < EE_PENDING_LIMIT; ++i)
@@ -97,7 +102,9 @@ int ee_persistence_save(EEPersistence *p,
                         unsigned int index,
                         unsigned int serial,
                         const EESaveBackend *backend) {
-    return p ? ee_character_save(&p->characters, character, index, serial, backend) : EE_SAVE_ERROR;
+    return p && !p->stage_overflow
+               ? ee_character_save(&p->characters, character, index, serial, backend)
+               : EE_SAVE_ERROR;
 }
 void ee_persistence_forget(EEPersistence *p, void *stats, void *character) {
     if (!p)

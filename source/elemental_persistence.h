@@ -12,6 +12,7 @@ typedef struct EEPendingSave {
 typedef struct EEPersistence {
     EECharacters characters;
     EEPendingSave pending[EE_PENDING_LIMIT];
+    int stage_overflow;
 } EEPersistence;
 /* Caller owns synchronization. A loaded stats object may not yet have a
  * usable character handle, so data is staged until that actor appears. */
