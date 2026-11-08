@@ -2,11 +2,9 @@
 #define ELEMENTAL_GAME_STRING_H
 
 /** @file elemental_game_string.h
- * @brief Kenshi's VC2010 string layout as used by KenshiLib and
- * MyGUI.
+ * @brief Kenshi's VC2010 string layout as used by KenshiLib and MyGUI.
  * @details Capacity below 16 stores characters inline; larger strings use
- * the borrowed
- * heap pointer. This layout is part of the game ABI.
+ * a borrowed heap pointer. This layout is part of the game ABI.
  */
 typedef struct EEGameString {
     union {
