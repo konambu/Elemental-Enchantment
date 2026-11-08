@@ -1,15 +1,15 @@
 #include "elemental_ui_view.h"
 #include "elemental_localization.h"
 typedef struct Mock {
-    int created, destroyed, radars, visible, selected, captions, opener_y, progress_pct;
+    int created, destroyed, radars, visible, selected, captions, opener_y, progress_pct, panel_x;
     char effect[256], detail[256], milestone[256], title[256], status[256], xp_label[256],
         xp_percent[256];
 } Mock;
 static void *create(void *c, void *p, int k, int x, int y, int w, int h) {
     Mock *m = (Mock *)c;
     (void)p;
-    (void)k;
-    (void)x;
+    if (k == EE_UI_PANEL)
+        m->panel_x = x;
     (void)w;
     (void)h;
     if (!m->created)
@@ -71,6 +71,25 @@ static int radar(void *c, void *w, const EEAffinity *s) {
 static void bar(void *c, void *w, unsigned int pct) {
     (void)w;
     ((Mock *)c)->progress_pct = (int)pct;
+}
+__declspec(dllexport) int ee_run_ui_resize_tests(void) {
+    static Mock mock;
+    EEUIViewAPI api = {&mock, create, destroy, visible, caption, selected, radar, bar};
+    EEUIView view;
+    EEAffinity affinity;
+    ee_ui_view_init(&view);
+    if (!ee_affinity_create(&affinity, 123, 1) ||
+        !ee_ui_view_build(&view, &api, (void *)100, 700, 500) || mock.panel_x != 712)
+        return 1;
+    ee_ui_view_sync(&view, &api, (void *)100, (void *)101, 1, 2, &affinity, 1);
+    ee_ui_view_click(&view, &api, view.opener);
+    if (!view.model.visible || !ee_ui_view_build(&view, &api, (void *)100, 700, 500) ||
+        mock.created != 35)
+        return 2;
+    if (!ee_ui_view_build(&view, &api, (void *)100, 800, 500) || mock.panel_x != 812 ||
+        mock.created != 70 || mock.destroyed != 2 || !view.model.visible)
+        return 3;
+    return 0;
 }
 __declspec(dllexport) int ee_run_ui_view_tests(void) {
     static Mock m;

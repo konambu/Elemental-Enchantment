@@ -64,6 +64,7 @@ typedef struct EEUIView {
     void *xp_percent;
     int second_mode;
     int graph_ready;
+    int built_parent_width;
     EEUIViewScale built_scale;
     EEAffinity graph_state;
 } EEUIView;

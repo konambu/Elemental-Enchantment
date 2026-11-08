@@ -87,6 +87,7 @@ void ee_ui_view_init(EEUIView *v) {
     v->xp_percent = 0;
     v->second_mode = 0;
     v->graph_ready = 0;
+    v->built_parent_width = 0;
     v->built_scale.x = 0;
     v->built_scale.y = 0;
     v->built_scale.manual = 0;
@@ -114,7 +115,8 @@ int ee_ui_view_build(EEUIView *v, const EEUIViewAPI *a, void *parent, int width,
     int i, x;
     if (!v || !valid(a) || !parent || width < 300 || height < 260)
         return 0;
-    if (v->parent == parent && v->opener && v->panel && v->built_scale.x == ui_view_scale.x &&
+    if (v->parent == parent && v->opener && v->panel && v->built_parent_width == width &&
+        v->built_scale.x == ui_view_scale.x &&
         v->built_scale.y == ui_view_scale.y && v->built_scale.manual == ui_view_scale.manual)
         return 1;
     if (v->parent) {
@@ -125,6 +127,7 @@ int ee_ui_view_build(EEUIView *v, const EEUIViewAPI *a, void *parent, int width,
         v->second_mode = mode;
     }
     v->parent = parent;
+    v->built_parent_width = width;
     v->built_scale.x = ui_view_scale.x;
     v->built_scale.y = ui_view_scale.y;
     v->built_scale.manual = ui_view_scale.manual;
