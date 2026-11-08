@@ -30,6 +30,7 @@ CHECKS = (
     "probeTestImpactPositions",
     "probeTestImpactQueue",
     "probeTestImpactSetting",
+    "probeCheckVisualStages",
     "probeTestMcmRegistration",
     "probeTestAllyHistoryFilter",
     "probeTestBossProfileLookup",

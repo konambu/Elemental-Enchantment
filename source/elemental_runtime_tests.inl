@@ -1491,6 +1491,11 @@ __declspec(dllexport) int probeTestVisualStages(void) {
         return 0;
     return 1;
 }
+/* Keep the existing boolean probe for visual harnesses; the check runner
+ * expects zero on success. */
+__declspec(dllexport) int probeCheckVisualStages(void) {
+    return probeTestVisualStages() ? 0 : 1;
+}
 __declspec(dllexport) int probeTestVisualSecondCount(void) {
     return weapon_visuals[0].effect2 ? (int)particle_count(weapon_visuals[0].effect2) : -1;
 }

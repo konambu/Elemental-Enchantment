@@ -8,6 +8,8 @@ The runtime's tracked actors include player characters and supported bosses. Wea
 
 Native diagnostic hooks are kept in `source/elemental_runtime_tests.inl`. They share internal state with the runtime and compile only when `ELEMENTAL_NATIVE_TEST` is enabled; they are excluded from the normal game build.
 
+`tools/run_native_checks.py` runs engine-independent checks in separate processes. Some other exported visual probes require a live Ogre scene and initialized engine functions, and are not covered by this runner. In particular, the runner does not verify actual trail creation, dual-wield trail placement, or in-game rendering; those require a visual harness or in-game testing.
+
 The standalone `elemental_*.c` modules contain affinity rules, character state, persistence, GameData access, localization, UI model/view logic, boss profiles, and the element-to-particle resource table. Add future element visual resources to `elemental_effect_templates.c`; it maps the same five elements across hand, blade, impact, and crossbow effects.
 
 `elemental_affinity.c` owns the shared XP thresholds, level calculation, secondary-element strength, and aptitude ring order. UI and radar code consume those definitions so their display stays aligned with the gameplay rules.
