@@ -1,4 +1,5 @@
 build/
+backups/
 *.log
 __pycache__/
 *.obj

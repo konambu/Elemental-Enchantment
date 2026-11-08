@@ -22,7 +22,7 @@ With Mod Config Menu installed, open Options > MCM > Elemental Enchantment to en
 ## Repository
 
 - `mod/Elemental Enchantment/`: Workshop package, including its plugin DLL.
-- `source/`: plugin source, particle code helpers and standalone tests.
+- `source/`: plugin source and the tests included in the local build.
 - `docs/`: draft Workshop description and change notes.
 
 The `mod` folder matches the uploaded Workshop files. The plugin uses game and KenshiLib APIs, so compatibility with other versions has not been established.

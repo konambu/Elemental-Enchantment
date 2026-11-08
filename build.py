@@ -1,9 +1,7 @@
-"""Build the private visual probe. Does not install it into the game."""
+"""Build the local Elemental Enchantment plugin candidate."""
 from pathlib import Path
-import importlib.util
-import sys
-root=Path.cwd()
 import os, subprocess
+import sys
 root=Path(__file__).resolve().parent
 source=root/'source'
 out=root/'build';out.mkdir(parents=True,exist_ok=True)
@@ -21,22 +19,20 @@ ntdll=out/'ntdll.lib'
 for name in ('kernel32','ntdll'):
     build.run([vc/'lib.exe','/nologo','/def:'+str(source/(name+'.def')),'/machine:x64','/out:'+str(out/(name+'.lib'))])
 test='--test' in sys.argv
-trail=True
-ui='--ui' in sys.argv or trail
-persistence='--persistence' in sys.argv or ui
-target=out/('SpellbladeTrailTest.dll' if test and trail else 'ElementalEnchantmentTest.dll' if trail else 'SpellbladeUITest.dll' if test and ui else 'SpellbladeUICandidate.dll' if ui else 'SpellbladePersistenceTest.dll' if test and persistence else 'SpellbladePersistenceCandidate.dll' if persistence else 'SpellbladeFireProbeTest.dll' if test else 'SpellbladeFireProbe.dll')
-flags=(['/DSPELLBLADE_NATIVE_TEST'] if test else [])+(['/DSB_ENABLE_PERSISTENCE'] if persistence else [])+(['/DSB_ENABLE_UI'] if ui else [])+(['/DSB_ENABLE_TRAIL'] if trail else [])
+target=out/('SpellbladeTrailTest.dll' if test else 'ElementalEnchantmentTest.dll')
+flags=['/DSB_ENABLE_PERSISTENCE','/DSB_ENABLE_UI','/DSB_ENABLE_TRAIL']
+if test: flags+=['/DSPELLBLADE_NATIVE_TEST']
 if '--frost-dev' in sys.argv:
     target=out/('FrostReloadDevTest.dll' if test else 'FrostReloadDev.dll')
     flags+=['/DSB_FROST_RELOAD_DEV']
 if '--ice-experimental' in sys.argv:
     target=out/('IceSceneNodeTest.dll' if test else 'IceSceneNodeTrial.dll')
     flags+=['/DSB_ICE_OVERLAY_EXPERIMENTAL']
-extra=['spellblade_affinity.c','spellblade_save.c','spellblade_gamedata.c','spellblade_characters.c','spellblade_persistence.c'] if persistence else []
-if ui: extra+=['spellblade_localization.c','spellblade_ui_model.c','spellblade_ui_view.c','spellblade_radar.c','spellblade_mygui.c']
-if test and ui: extra+=['spellblade_ui_model_test.c','spellblade_ui_view_test.c']
+extra=['spellblade_affinity.c','spellblade_save.c','spellblade_gamedata.c','spellblade_characters.c','spellblade_persistence.c',
+       'spellblade_localization.c','spellblade_ui_model.c','spellblade_ui_view.c','spellblade_radar.c','spellblade_mygui.c']
+if test: extra+=['spellblade_ui_model_test.c','spellblade_ui_view_test.c','spellblade_characters_test.c']
 build.run([str(vc/'cl.exe'),'/nologo','/LD','/O2','/GS-','/Oi','/Zl',*flags,'/Fo'+str(out)+'/',
            str(source/'blade_fire_probe.c'),*(str(source/f) for f in extra),'/link','/NODEFAULTLIB','/ENTRY:DllMain',
            '/MACHINE:X64','/DYNAMICBASE','/NXCOMPAT','/DEF:'+str(source/'hit_observer.def'),
            '/IMPLIB:'+str(out/'probe.lib'),'/OUT:'+str(target),str(kernel),str(ntdll)])
-print('Built private visual probe:',target)
+print('Built local plugin candidate:',target)

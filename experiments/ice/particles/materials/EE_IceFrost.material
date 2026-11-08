@@ -1,0 +1,13 @@
+material EE_IceFrost
+{
+ technique { pass {
+  vertex_program_ref Basic_Texture_VP {}
+  fragment_program_ref Basic_Texture_FP {}
+  lighting off
+  scene_blend alpha_blend
+  depth_write off
+  depth_bias 2 2
+  cull_hardware none
+  texture_unit { texture EE_IceFrost.png }
+ } }
+}

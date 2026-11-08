@@ -13,6 +13,8 @@ typedef struct SBCharacters { SBCharacterRecord records[SB_CHARACTER_LIMIT]; } S
 /* Caller serializes access. Pointer and handle are jointly used to avoid
  * carrying a dead character's state onto a recycled game object. */
 void sb_characters_init(SBCharacters*);
+/* Optional entropy for newly created records only; never used for loaded data. */
+void sb_characters_set_seed_provider(unsigned int (*provider)(unsigned int));
 SBCharacterRecord* sb_character_observe(SBCharacters*,void*,unsigned int,unsigned int,unsigned int,unsigned int);
 int sb_character_load(SBCharacters*,void*,unsigned int,unsigned int,const SBSaveBackend*);
 int sb_character_save(SBCharacters*,void*,unsigned int,unsigned int,const SBSaveBackend*);

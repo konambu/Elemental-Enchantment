@@ -28,6 +28,7 @@ __declspec(dllimport) unsigned int __stdcall GetPrivateProfileIntA(const char*,c
 __declspec(dllimport) DWORD __stdcall GetPrivateProfileStringA(const char*,const char*,const char*,char*,DWORD,const char*);
 __declspec(dllimport) DWORD __stdcall GetCurrentThreadId(void);
 __declspec(dllimport) U64 __stdcall GetTickCount64(void);
+__declspec(dllimport) int __stdcall QueryPerformanceCounter(U64*);
 __declspec(dllimport) void __stdcall AcquireSRWLockExclusive(void*);
 __declspec(dllimport) void __stdcall ReleaseSRWLockExclusive(void*);
 __declspec(dllimport) void* __stdcall CreateFileA(const char*,DWORD,DWORD,void*,DWORD,DWORD,void*);
@@ -49,6 +50,10 @@ static HandFire hand_fires[SB_ALLY_LIMIT*2];
 static void* guard; static DWORD internal; static int active,logged_full; static U64 serial;
 static char log_path[1024]; static MODULE self;
 static char settings_path[1024]; static int all_aptitudes; static float effect_multiplier=1.0f; static unsigned int xp_tenths=10,ui_scale_tenths=10; static int show_trails=1,show_impacts=1;
+#ifdef SB_ENABLE_PERSISTENCE
+/* Called only when an unsaved player record is first created, under guard. */
+static unsigned int fresh_aptitude_seed(unsigned int seed){static unsigned int sequence;U64 ticks=0;QueryPerformanceCounter(&ticks);++sequence;return seed^(unsigned int)ticks^(unsigned int)(ticks>>32)^(unsigned int)GetTickCount64()^(sequence*0x9e3779b9u);}
+#endif
 #ifdef SB_ENABLE_UI
 static void select_game_locale(void);
 #endif
@@ -634,6 +639,7 @@ __declspec(dllexport) void startPlugin(void) {
 #endif
 #ifdef SB_ENABLE_PERSISTENCE
     sb_persistence_init(&persistence);
+    sb_characters_set_seed_provider(fresh_aptitude_seed);
     GAMEAPI(character_stats,"?getStats@Character@@QEAAPEAVCharStats@@XZ");
     GAMEAPI(gamedata_api.list_exists,"?listExists@GameData@@QEBA_NAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z");
     GAMEAPI(gamedata_api.list_size,"?getListSize@GameData@@QEBAHAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z");
@@ -1069,6 +1075,13 @@ __declspec(dllexport) int probeTestAptitudeOverride(void) {
     if(a.xp[0]!=100||a.rates[0]!=60||!sb_affinity_encode(&a,record)||!sb_affinity_decode(&b,record)||b.rates[0]!=60)return 3;
     for(i=0;i<25;++i)sb_affinity_award_hit_rate(&b,0);
     return b.xp[0]==160?0:4;
+}
+__declspec(dllexport) int probeTestNewGameAptitude(void) {
+    static SBCharacters chars;unsigned int counts[5]={0},i,j;SBCharacterRecord* r;
+    sb_characters_init(&chars);sb_characters_set_seed_provider(fresh_aptitude_seed);
+    for(i=0;i<1000;++i){r=sb_character_observe(&chars,(void*)1,10,20,99,0);if(!r||r->affinity.selected!=0)return 1;
+        for(j=0;j<5;++j)if(r->affinity.rates[j]==100)++counts[j];sb_character_forget(&chars,(void*)1);}
+    sb_characters_set_seed_provider(0);for(i=0;i<5;++i)if(counts[i]<80||counts[i]>330)return 2;return 0;
 }
 __declspec(dllexport) int probeTestAffinity(void) {unsigned int i,counts[6]={0};for(i=1;i<1000;++i){unsigned int a=affinity_seed(i,7);if(a!=affinity_seed(i,7)||a<1||a>5)return 1;++counts[a];}for(i=1;i<=5;++i)if(counts[i]<120)return 2;return 0;}
 __declspec(dllexport) int probeTestFrostSetup(int slot,void* owner,void* blade,void* scene,int bone,void* tag){

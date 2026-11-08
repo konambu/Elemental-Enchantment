@@ -1,138 +1,142 @@
 [h1]Elemental Enchantment[/h1]
 
-Enchant melee weapons, fists and crossbows with elemental power.
-Choose a main element for each character, raise their Elemental level, and eventually combine two elements.
+Wear the elements. Choose your style of battle.
 
-[b]Crossbow beta:[/b] Elemental effects appear while loading and on flying bolts.
-Elements also affect combat and reload speed.
+Enchant melee weapons, fists and crossbows with fire, lightning, wind, water or ice. Develop each character's aptitude and combine two elements as they grow.
 
-[h2]Elements[/h2]
-Main element bonuses at level 0–100, with default 1x strength:
+[h2]How to play[/h2]
+Select [b]ENCHANTMENT[/b] in a character's stats. Attack with an active element to gain experience and improve its effects. Aptitude affects each character's growth rate.
+
+[h2]The five elements[/h2]
 [list]
-[*][b]Fire[/b]: Adds blunt damage equal to 5–15% of the attack's base cut and blunt damage.
-[*][b]Lightning[/b]: Adds 5–15% armour penetration and increases attack speed by 1–5%.
-[*][b]Wind[/b]: Increases attack, block and crossbow reload speed by 2–10%.
-[*][b]Water[/b]: Adds cut damage equal to 5–15% of the attack's base cut and blunt damage.
-[*][b]Ice[/b]: Adds cut damage equal to 2–10% of the attack's base cut and blunt damage, and increases the bleed multiplier by 0.1–0.5.
+[*][b]Fire[/b]: Adds blunt damage.
+[*][b]Lightning[/b]: Improves armour penetration and attack speed.
+[*][b]Wind[/b]: Improves attack and block speed, and crossbow reload speed.
+[*][b]Water[/b]: Adds cut damage.
+[*][b]Ice[/b]: Adds cut damage and increases bleeding.
 [/list]
 
-[h2]Aptitude and experience[/h2]
-Random aptitude affects experience: 100% for the strongest element, 80% for neighbours, 60% for the other two. Rare characters have 100% in all elements. Maximum level and bonuses are unaffected.
-
-All elements share one Elemental level, up to 100. Successful melee or crossbow hits can earn experience while an element is active.
-Open the character's stats and select ENCHANTMENT to choose elements and view aptitude, experience and bonuses.
-
-[h2]Mod Config Menu settings (optional)[/h2]
-Options > MCM > Elemental Enchantment:
-[list]
-[*][b]Elemental XP[/b]: 0x–20x (default 1x).
-[*][b]Effect strength[/b]: 0x–5x (default 1x). At 0x, enjoy visuals only; experience still works. Applies to allies and enchanted bosses.
-[*][b]Weapon trails[/b]: Toggle attack trails without affecting other visuals.
-[*][b]Impact effects[/b]: Toggle level 40+ hit bursts.
-[*][b]All elemental aptitudes 100%[/b]: Remove player XP penalties. Off by default; disabling restores original aptitudes.
-[/list]
+Distinct visuals include weapon trails and hit sparks.
 
 [h2]Progression[/h2]
+Bonuses grow every level; milestones unlock new effects:
 [list]
-[*][b]Level 20[/b]: Weapon trails appear while attacking.
-[*][b]Level 40[/b]: Larger visuals and elemental hit bursts.
+[*][b]Level 20[/b]: Weapon trails appear during attacks.
+[*][b]Level 40[/b]: Impact effects unlock and visuals grow.
 [*][b]Level 50[/b]: Unlock a secondary element at 25% strength.
 [*][b]Levels 60 / 70 / 80 / 90 / 100[/b]: Secondary strength rises to 35% / 45% / 55% / 65% / 75%.
-[*][b]Levels 80 and 100[/b]: Elemental effects grow larger visually.
+[*][b]Levels 80 and 100[/b]: Elemental visuals grow further.
 [/list]
 
-[h2]Requirements and compatibility[/h2]
-Requires [url=https://github.com/BFrizzleFoShizzle/RE_Kenshi]RE_Kenshi[/url].
-Tested on Kenshi 1.0.65 with RE_Kenshi 0.3.5; other builds have not been verified.
-Players and selected bosses can use enchantments; boss combat effects are experimental.
-For Nitoryu, load Elemental Enchantment above Nitoryu.
+Each character has a random aptitude. Favoured elements grow faster; rare characters excel at all five.
 
-Beta: please report any issues!
+[h2]Mod Config Menu settings (optional)[/h2]
+[list]
+[*][b]Elemental XP[/b]: 0–20x (default 1x).
+[*][b]Effect strength[/b]: 0–5x (default 1x); 0x keeps visuals only.
+[*][b]Weapon trails / impact effects[/b]: Toggle each visual.
+[*][b]All aptitudes at 100%[/b]: Remove aptitude XP differences.
+[*][b]UI scale[/b]: ENCHANTMENT window size, 0.8x–2x.
+[/list]
+
+[h2]Required mod[/h2]
+[table]
+[tr][th]Required[/th][td][url=https://github.com/BFrizzleFoShizzle/RE_Kenshi]RE_Kenshi[/url][/td][/tr]
+[/table]
+
+Crossbow combat effects are still being verified. Some bosses can use enchantments, but their combat effects are also under testing. If using Nitoryu, load Elemental Enchantment above Nitoryu.
+
+Currently in beta. Please share feedback in the comments!
 
 [h1]日本語[/h1]
 
-近接武器、素手、クロスボウに属性の力をまとわせるModです。
-キャラクターごとに主属性を選び、成長すると２つ目の属性も組み合わせられます。
+属性をまとい、戦い方を選べ。
 
-[b]クロスボウ対応はベータ版です。[/b]
-装填中と飛翔中のボルトに属性エフェクトが付き、属性に応じて戦闘効果や装填速度も変化します。
+火・雷・風・水・氷を近接武器・素手・クロスボウにまとわせ、戦い方を変えよう。仲間ごとの適性を育て、成長したら２属性を組み合わせよう。
 
-[h2]属性ごとの効果[/h2]
-主属性・倍率１倍でのレベル０〜100の数値です。副属性にはその強さに応じた補正がかかります。
+[h2]遊び方[/h2]
+能力画面の[b]ENCHANTMENT[/b]から属性を選び、攻撃して経験値を獲得。効果は毎レベル強くなり、適性で成長速度が変わります。
+
+[h2]５つの属性[/h2]
 [list]
-[*][b]火[/b]：攻撃の基本切断＋打撃ダメージの5〜15%を打撃ダメージとして追加。
-[*][b]雷[/b]：防具貫通を5〜15%追加し、攻撃速度を1〜5%上昇。
-[*][b]風[/b]：攻撃・防御・クロスボウの装填速度を2〜10%上昇。
-[*][b]水[/b]：攻撃の基本切断＋打撃ダメージの5〜15%を切断ダメージとして追加。
-[*][b]氷[/b]：攻撃の基本切断＋打撃ダメージの2〜10%を切断ダメージとして追加し、出血倍率を0.1〜0.5加算。
+[*][b]火[/b]：打撃ダメージを追加。
+[*][b]雷[/b]：防具貫通と攻撃速度を強化。
+[*][b]風[/b]：攻撃・防御速度とクロスボウの装填速度を強化。
+[*][b]水[/b]：切断ダメージを追加。
+[*][b]氷[/b]：切断ダメージと出血を強化。
 [/list]
 
-[h2]適性と経験値[/h2]
-適性はランダムで、得意属性の経験値は100%、両隣は80%、残りは60%。まれに全属性100%もいます。適性はレベルや効果の上限には影響しません。
+属性ごとのエフェクト、攻撃の軌跡、命中演出も楽しめます。
 
-レベルは全属性で共通、上限は100です。属性を有効にして近接攻撃やクロスボウを当てると経験値が入ります。
-キャラクターの能力画面にあるENCHANTMENTから、属性の選択や適性・経験値・効果を確認できます。
+[h2]レベルアップと解放[/h2]
+属性効果は毎レベル成長。節目で演出や副属性が解放されます。
+[list]
+[*][b]レベル20[/b]：攻撃時の武器の軌跡が解放。
+[*][b]レベル40[/b]：命中エフェクトが解放され、エフェクトが大きく成長。
+[*][b]レベル50[/b]：副属性が25%の強さで解放。
+[*][b]レベル60／70／80／90／100[/b]：副属性の強さが35%／45%／55%／65%／75%へ上昇。
+[*][b]レベル80・100[/b]：エフェクトがさらに大きく成長。
+[/list]
+
+得意属性はキャラクターごとにランダム。まれに全属性が得意な仲間もいます。適性は成長速度に影響します。
 
 [h2]Mod Config Menuの設定（任意）[/h2]
-設定 → MCM → Elemental Enchantment：
 [list]
-[*][b]属性経験値[/b]：０〜20倍（初期１倍）。
-[*][b]属性効果の倍率[/b]：０〜５倍（初期１倍）。０倍は見た目だけになり、経験値は入ります。仲間と属性付きボスに適用。
-[*][b]武器の軌跡[/b]：攻撃時の軌跡をオン・オフ。
-[*][b]命中エフェクト[/b]：レベル40からの命中演出をオン・オフ。
-[*][b]全属性の適性100%[/b]：仲間の経験値減少をなくします。初期値オフ。オフで元の適性に戻ります。
+[*][b]属性経験値倍率[/b]：0〜20倍（初期値1倍）。
+[*][b]属性効果倍率[/b]：0〜5倍（初期値1倍）。0倍なら見た目だけ。
+[*][b]武器の軌跡・命中エフェクト[/b]：個別にオン・オフ。
+[*][b]全属性の適性を100%に[/b]：仲間の経験値減少をなくす。
+[*][b]画面サイズ[/b]：0.8〜2倍。
 [/list]
 
-[h2]レベルごとの解放[/h2]
-[list]
-[*][b]レベル20[/b]：攻撃時に武器の軌跡が出現。
-[*][b]レベル40[/b]：エフェクトが大きくなり、命中時に属性演出。
-[*][b]レベル50[/b]：副属性が解放。最初は25%の強さで効果を発揮します。
-[*][b]レベル60／70／80／90／100[/b]：副属性の強さが35%／45%／55%／65%／75%へ上昇。
-[*][b]レベル80・100[/b]：エフェクトがさらに大きくなります。
-[/list]
+[h2]必要Mod[/h2]
+[table]
+[tr][th]必要[/th][td][url=https://github.com/BFrizzleFoShizzle/RE_Kenshi]RE_Kenshi[/url][/td][/tr]
+[/table]
 
-[h2]必要環境[/h2]
-[list]
-[*][url=https://github.com/BFrizzleFoShizzle/RE_Kenshi]RE_Kenshi[/url]が必要です。
-[*]Kenshi 1.0.65／RE_Kenshi 0.3.5でテスト済み。
-[/list]
-[h2]対応範囲[/h2]
-[list]
-[*]仲間と一部のボスが対象です。
-[*]Nitoryu併用時はElemental EnchantmentをNitoryuより上に配置。
-[*]ボスの戦闘効果は検証中です。
-[/list]
+クロスボウの戦闘効果は検証中です。一部のボスも属性を使用しますが、ボスへの戦闘効果も検証中です。Nitoryuと併用する場合は、このModをNitoryuより上に配置してください。
 
-初回ベータ版です。不具合があればコメントで教えてください！
+ベータ版です。不具合や感想をコメントで教えてください！
+
+[h1]한국어[/h1]
+
+무기·맨손·볼트에 불·번개·바람·물·얼음을 부여하세요. [b]ENCHANTMENT[/b]에서 속성을 선택해 공격하고 성장하세요. 20레벨 궤적, 40레벨 적중 효과, 50레벨 보조 속성(25%, 100레벨 75%)이 해금됩니다.
+
+MCM 설정 가능. 필요 Mod: [url=https://github.com/BFrizzleFoShizzle/RE_Kenshi]RE_Kenshi[/url]. 크로스보우·보스 전투 효과는 검증 중. Nitoryu보다 위에 배치하세요. 베타.
+
+[h1]Русский[/h1]
+
+Огонь, молния, ветер, вода и лёд для оружия, кулаков и болтов арбалета. Выберите [b]ENCHANTMENT[/b] и атакуйте для роста. Уровень 20: следы; 40: попадания; 50: вторая стихия (25%, до 75% к уровню 100).
+
+Настройки MCM. Требуется [url=https://github.com/BFrizzleFoShizzle/RE_Kenshi]RE_Kenshi[/url]. Эффекты арбалета и боссов проверяются. С Nitoryu загрузите этот мод выше. Бета.
 
 
-[h2]한국어[/h2]
-근접 무기와 맨손에 불·번개·바람·물·얼음 속성을 부여합니다.
-캐릭터마다 무작위 적성이 있으며, 레벨 50에 보조 속성이 해금됩니다.
-속성을 켜고 근접 공격을 맞히면 경험치를 얻습니다.
+[h1]Español[/h1]
 
-캐릭터 능력창 왼쪽의 ENCHANTMENT 버튼에서 속성과 적성, 경험치, 효과를 확인하세요.
-RE_Kenshi가 필요합니다.
+Imbuye armas, puños y virotes con fuego, rayo, viento, agua o hielo. Elige [b]ENCHANTMENT[/b] y ataca para crecer. Nivel 20: estelas; 40: impactos; 50: segundo elemento (25%, hasta 75% al nivel 100).
 
-MCM(선택)에서 All elemental aptitudes 100%를 켜면 경험치 감소가 없어집니다.
+MCM configurable. Requiere [url=https://github.com/BFrizzleFoShizzle/RE_Kenshi]RE_Kenshi[/url]. Efectos de ballesta y jefes en pruebas. Con Nitoryu, coloca este mod por encima. Beta.
 
-[h2]Русский[/h2]
-Накладывайте стихийные чары на оружие ближнего боя и кулаки: огонь, молния, ветер, вода и лёд. У каждого персонажа есть своя предрасположенность; на 50-м уровне открывается вторая стихия.
-Выбор стихии: откройте характеристики персонажа и нажмите ENCHANTMENT.
-Требуется RE_Kenshi.
+[h1]Português (Brasil)[/h1]
 
-[h2]简体中文[/h2]
-为近战武器和徒手攻击附加火、雷、风、水、冰五种元素效果。每个角色都有自己的元素天赋，元素等级达到50级后可解锁第二种元素。
-打开角色属性界面并点击 ENCHANTMENT 即可选择元素。
-需要 RE_Kenshi。
+Encante armas, punhos e virotes com fogo, raio, vento, água ou gelo. Escolha [b]ENCHANTMENT[/b] e ataque para evoluir. Nível 20: rastros; 40: impactos; 50: segundo elemento (25%, até 75% no nível 100).
 
-[h2]Español[/h2]
-Encanta tus armas cuerpo a cuerpo y puños con fuego, rayo, viento, agua o hielo. Cada personaje tiene su propia afinidad y desbloquea un segundo elemento al alcanzar el nivel 50.
-Abre las estadísticas del personaje y pulsa ENCHANTMENT para elegir un elemento.
-Requiere RE_Kenshi.
+Configurações MCM. Requer [url=https://github.com/BFrizzleFoShizzle/RE_Kenshi]RE_Kenshi[/url]. Efeitos de bestas e chefes em teste. Com Nitoryu, deixe este mod acima. Beta.
 
-[h2]Português (Brasil)[/h2]
-Encante armas corpo a corpo e punhos com fogo, raio, vento, água ou gelo. Cada personagem possui sua própria afinidade e desbloqueia um segundo elemento no nível 50.
-Abra os atributos do personagem e selecione ENCHANTMENT para escolher o elemento.
-Requer RE_Kenshi.
+[h1]Deutsch[/h1]
+
+Verzaubere Waffen, Fäuste und Bolzen mit Feuer, Blitz, Wind, Wasser oder Eis. Wähle [b]ENCHANTMENT[/b] in den Charakterwerten. Stufe 20: Spuren; 40: Treffer-Effekte; 50: Zweitelement (25%, bis 75% auf Stufe 100).
+
+MCM-Einstellungen. Benötigt [url=https://github.com/BFrizzleFoShizzle/RE_Kenshi]RE_Kenshi[/url]. Armbrust- und Boss-Effekte werden getestet. Mit Nitoryu diese Mod darüber laden. Beta.
+
+[h1]Français[/h1]
+
+Enchantez armes, poings et carreaux avec le feu, la foudre, le vent, l’eau ou la glace. Choisissez [b]ENCHANTMENT[/b] et attaquez pour progresser. Niveau 20 : traînées ; 40 : impacts ; 50 : second élément (25%, jusqu’à 75% au niveau 100).
+
+Options MCM. Requiert [url=https://github.com/BFrizzleFoShizzle/RE_Kenshi]RE_Kenshi[/url]. Effets d’arbalète et de boss en test. Avec Nitoryu, chargez ce mod au-dessus. Bêta.
+
+[h1]简体中文[/h1]
+
+为武器、徒手攻击和弩箭附加火、雷、风、水、冰属性。打开角色属性并选择 [b]ENCHANTMENT[/b]，战斗可获得经验。20级解锁武器轨迹，40级解锁命中特效，50级解锁副属性（25%，100级达到75%）。
+
+MCM可调整设置。需要 [url=https://github.com/BFrizzleFoShizzle/RE_Kenshi]RE_Kenshi[/url]。弩与部分Boss的战斗效果仍在测试。与Nitoryu一起使用时，将本Mod排在其上方。测试版，欢迎留言反馈。

@@ -9,6 +9,7 @@ CloseHandle
 GetProcAddress
 GetCurrentThreadId
 GetTickCount64
+QueryPerformanceCounter
 AcquireSRWLockExclusive
 ReleaseSRWLockExclusive
 GetPrivateProfileIntA

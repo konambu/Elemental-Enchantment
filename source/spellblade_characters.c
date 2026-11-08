@@ -1,4 +1,6 @@
 #include "spellblade_characters.h"
+static unsigned int (*new_record_seed)(unsigned int);
+void sb_characters_set_seed_provider(unsigned int (*provider)(unsigned int)){new_record_seed=provider;}
 static void clear(SBCharacterRecord* r){r->character=0;r->index=0;r->serial=0;r->read_only=0;r->handle_change_depth=0;}
 void sb_characters_init(SBCharacters* c){int i;if(c)for(i=0;i<SB_CHARACTER_LIMIT;++i)clear(&c->records[i]);}
 static SBCharacterRecord* lookup(SBCharacters* c,void* ch,unsigned int index,unsigned int serial,int create)
@@ -19,7 +21,9 @@ SBCharacterRecord* sb_character_observe(SBCharacters* c,void* ch,unsigned int in
     if(r)return r;
     if(trial>5)return 0;
     r=lookup(c,ch,index,serial,1);if(!r)return 0;
-    if(!sb_affinity_create(&r->affinity,seed,trial)){clear(r);return 0;}return r;
+    if(new_record_seed)seed=new_record_seed(seed);
+    if(!sb_affinity_create(&r->affinity,seed,trial)){clear(r);return 0;}
+    return r;
 }
 int sb_character_load(SBCharacters* c,void* ch,unsigned int index,unsigned int serial,const SBSaveBackend* backend)
 {
