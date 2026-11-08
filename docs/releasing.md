@@ -27,6 +27,8 @@ python .\source\generate_localization.py
 # Build the normal plugin DLL:
 python .\build.py
 if ($LASTEXITCODE -ne 0) { throw 'Plugin build failed; do not stage an older DLL.' }
+python .\tools\check_release_exports.py
+if ($LASTEXITCODE -ne 0) { throw 'Plugin export check failed.' }
 
 # Put that DLL into the project package first:
 Copy-Item -LiteralPath '.\build\ElementalEnchantmentTest.dll' `
