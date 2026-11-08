@@ -10,6 +10,7 @@ typedef struct { float w,x,y,z; } Quat;
 #include "elemental_persistence.h"
 #include "elemental_gamedata.h"
 #endif
+#include "elemental_boss_profiles.h"
 #ifdef EE_ENABLE_UI
 #include "elemental_mygui.h"
 #include "elemental_localization.h"
@@ -214,37 +215,6 @@ static void logline(const char* s) {
 /* Cache profile IDs for loaded characters. Caller holds guard; cached pointer
  * values are only compared, never dereferenced. */
 typedef struct { void* character; unsigned int index, generation; int boss_profile; } BossDiagSeen;
-typedef struct { const char *id; int primary,secondary,level; } BossProfile;
-static const BossProfile boss_profiles[]={
-    {"17225-Dialogue.mod",1,2,80}, {"59164-Dialogue.mod",2,1,65},
-    {"59165-Dialogue.mod",1,2,65}, {"51751-Dialogue.mod",2,5,60},
-    {"43159-Dialogue.mod",4,3,80}, {"59030-Dialogue.mod",3,2,90},
-    {"1533858-rebirth.mod",2,5,100}, {"51333-rebirth.mod",5,4,90},
-    {"50350-rebirth.mod",3,5,70}, /* Moll */
-    {"56727-Dialogue.mod",4,1,70}, /* Flying Bull */
-    {"56730-Dialogue.mod",1,3,65}, /* Ghost */
-    {"98164-Dialogue.mod",4,3,65}, /* Tora */
-    {"62981-Dialogue.mod",5,2,85}, /* Savant */
-    {"95756-__december17.mod",1,4,80}, /* Valamon */
-    {"62827-rebirth.mod",4,5,80}, /* Crab Queen */
-    {"62807-rebirth.mod",2,5,85}, /* Skeleton Bandits' Elder */
-    {"96407-Dialogue.mod",4,5,75}, /* King Gurgler */
-    {"48447-Dialogue.mod",4,1,65}, /* Big Grim */
-    {"56576-Dialogue.mod",2,4,85}, /* Eyegore */
-    {"56365-Dialogue.mod",2,5,70}, /* Longen */
-    {"65004-Dialogue.mod",3,1,60}, /* Boss Simion */
-    {"56824-Dialogue.mod",1,2,65}, /* The Preacher */
-    {"56887-Dialogue.mod",3,5,60}, /* Buzan */
-    {"56888-Dialogue.mod",5,3,60}, /* Dimak */
-    {"56889-Dialogue.mod",1,4,60}, /* Red Sabre Boss */
-    {"48718-Dialogue.mod",5,4,60}, /* Big Gray */
-    {"48738-Dialogue.mod",4,1,60}, /* Big Al */
-    {"63884-Dialogue.mod",3,5,65}, /* Shade */
-    {"96409-rebirth.mod",2,1,80}, /* Screamer the False */
-    {"96407-rebirth.mod",5,2,80}, /* Ponk */
-    {"1533326-__world reactions Shek.mod",4,1,85}, /* Mukai */
-    {"50519-rebirth.mod",1,3,75} /* Cannibal Grand Wizard */
-};
 static BossDiagSeen boss_diag_seen[4096];
 static unsigned int boss_diag_count;
 static int boss_diag_character(void* character) {
@@ -265,8 +235,8 @@ static int boss_diag_character(void* character) {
     if(!sid->size || sid->size>160 || sid->capacity<sid->size)return 0;
     { const char* text=sid->capacity<16?sid->text.small:sid->text.heap;
       unsigned int j;
-      for(j=0;text && j<sizeof(boss_profiles)/sizeof(boss_profiles[0]);++j) {
-        const char* target=boss_profiles[j].id;
+      for(j=0;text && j<ee_boss_profile_count();++j) {
+        const EEBossProfile* boss_entry=ee_boss_profile_at(j);const char* target=boss_entry?boss_entry->id:0;
         for(i=0;i<sid->size && target[i] && text[i]==target[i];++i){}
         if(i==sid->size && !target[i]){ profile=(int)j+1; break; }
       }
@@ -346,7 +316,7 @@ static int combat_affinity_locked(void* character,void* stats,EEAffinity* out)
         *out=r->affinity;return 1;
     }
     boss=boss_diag_character(character);if(!boss)return 0;
-    { const BossProfile* p=&boss_profiles[boss-1];unsigned int l=(unsigned int)p->level;
+    { const EEBossProfile* p=ee_boss_profile_at((unsigned int)(boss-1));unsigned int l;if(!p)return 0;l=(unsigned int)p->level;
       if(!ee_affinity_create(out,0,(unsigned int)p->primary))return 0;
       out->xp[0]=(unsigned short)(4u*(20u*l+l*(l-1u)));
       out->secondary=(unsigned int)p->secondary;
@@ -459,7 +429,7 @@ static void character_update_hook(void* character) {
         player=character_is_player(character);
         if(!player){AcquireSRWLockExclusive(&guard);__try {__try {boss=boss_diag_character(character);} __except(1) {boss=0;}skip_untracked=!boss&&!ally_seen_maybe(character);} __finally {ReleaseSRWLockExclusive(&guard);}}
         if(!skip_untracked){
-        if(player||boss){element=player?element_from_character(character):boss_profiles[boss-1].primary;melee=melee_context(character);
+        if(player||boss){const EEBossProfile* profile=boss?ee_boss_profile_at((unsigned int)(boss-1)):0;element=player?element_from_character(character):(profile?profile->primary:1);melee=melee_context(character);
 #ifdef EE_ENABLE_PERSISTENCE
             {const unsigned char* h=(const unsigned char*)character_handle(character);if(h){index=*(const unsigned int*)(h+0x14);serial_number=*(const unsigned int*)(h+0x18);has_handle=1;}stats=character_stats(character);}
 #endif
@@ -471,7 +441,7 @@ static void character_update_hook(void* character) {
         }
         AcquireSRWLockExclusive(&guard);
         __try {
-            if(boss){secondary=boss_profiles[boss-1].secondary;level=boss_profiles[boss-1].level;}
+            if(boss){const EEBossProfile* profile=ee_boss_profile_at((unsigned int)(boss-1));if(profile){secondary=profile->secondary;level=profile->level;}}
 #ifdef EE_ENABLE_PERSISTENCE
             if(player&&body&&has_handle){EECharacterRecord* r=ee_persistence_bind(&persistence,stats,character,index,serial_number,index^(serial_number*0x9e3779b9u),(unsigned int)element);if(r){element=(int)r->affinity.selected;if(!r->read_only){secondary=(int)r->affinity.secondary;level=(int)ee_affinity_level(&r->affinity,0);}}}
 #endif
