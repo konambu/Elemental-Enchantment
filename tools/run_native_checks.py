@@ -10,6 +10,7 @@ DLL = ROOT / "build" / "ElementalEnchantmentTests.dll"
 CHECKS = (
     "ee_run_game_string_tests",
     "ee_run_persistence_tests",
+    "ee_run_gamedata_tests",
     "ee_run_affinity_threshold_tests",
     "ee_run_affinity_migration_tests",
     "ee_run_characters_tests",
