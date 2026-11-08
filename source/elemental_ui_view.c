@@ -242,35 +242,39 @@ static void effect_text(char out[256],
                         const EEAffinity *a,
                         unsigned int weight) {
     const EELocale *l = ee_locale_get();
-    unsigned int level = ee_affinity_level(a, 0), value, e = a->selected;
-    weight *= ui_effect_tenths;
+    unsigned int value, e = a->selected;
+    float multiplier = (float)(weight * ui_effect_tenths) / 1000.0f;
+    EEAffinity single = *a;
+    EEDamage damage = {1.0f, 0, 0, 0, 0, 0};
     if (!e || e > 5) {
         add(out, 0, 256, l->noelement);
         *detail = l->choose;
         return;
     }
+    /* Calculate one element at a time using the same rules as combat. */
+    single.secondary = 0;
+    ee_affinity_damage_scaled(&single, &damage, multiplier);
     if (e == 1) {
-        value = 50u + level;
-        decimal(out, 256, l->blunt, (value * weight + 500u) / 1000u, 1);
+        value = (unsigned int)(damage.blunt * 1000.0f + 0.5001f);
+        decimal(out, 256, l->blunt, value, 1);
         *detail = l->base;
     } else if (e == 2) {
-        value = 50u + level;
-        decimal(out, 256, l->armour, (value * weight + 500u) / 1000u, 1);
-        decimal(
-            detail_out, 256, l->bolt, ((10u + (4u * level + 5u) / 10u) * weight + 500u) / 1000u, 1);
+        float speed = ee_affinity_attack_speed_scaled(&single, 1.0f, multiplier) - 1.0f;
+        value = (unsigned int)(damage.armour * 1000.0f + 0.5001f);
+        decimal(out, 256, l->armour, value, 1);
+        decimal(detail_out, 256, l->bolt, (unsigned int)(speed * 1000.0f + 0.5001f), 1);
         *detail = detail_out;
     } else if (e == 3) {
-        value = 20u + (8u * level + 5u) / 10u;
-        decimal(out, 256, l->attackblock, (value * weight + 500u) / 1000u, 1);
+        float speed = ee_affinity_combat_speed_scaled(&single, 1.0f, multiplier) - 1.0f;
+        decimal(out, 256, l->attackblock, (unsigned int)(speed * 1000.0f + 0.5001f), 1);
         *detail = l->winddetail;
     } else if (e == 4) {
-        value = 50u + level;
-        decimal(out, 256, l->cut, (value * weight + 500u) / 1000u, 1);
+        value = (unsigned int)((damage.cut - 1.0f) * 1000.0f + 0.5001f);
+        decimal(out, 256, l->cut, value, 1);
         *detail = l->base;
     } else {
         int n = 0;
-        value = (10u + (40u * level) / 100u) * weight;
-        value = (value + 500u) / 1000u;
+        value = (unsigned int)(damage.bleed * 100.0f + 0.5001f);
         n = add(out, n, 256, l->bleed);
         n = add(out, n, 256, " +");
         n = num(out, n, 256, value / 100);
@@ -279,7 +283,7 @@ static void effect_text(char out[256],
             n = add(out, n, 256, "0");
         num(out, n, 256, value % 100);
         decimal(
-            detail_out, 256, l->cut, ((20u + (8u * level + 5u) / 10u) * weight + 500u) / 1000u, 1);
+            detail_out, 256, l->cut, (unsigned int)((damage.cut - 1.0f) * 1000.0f + 0.5001f), 1);
         *detail = detail_out;
     }
 }
@@ -314,6 +318,11 @@ __declspec(dllexport) int probeTestHalfEffectDisplay(void) {
     effect_text(out, detail_out, &detail, &a, 100);
     if (!ui_test_has(out, "0.25"))
         return 2;
+    a.xp[0] = (unsigned short)ee_affinity_xp_for_level(2);
+    ee_ui_view_set_effect_multiplier(5.0f);
+    effect_text(out, detail_out, &detail, &a, 100);
+    if (!ui_test_has(out, "0.54") || !ui_test_has(detail, "10.8%"))
+        return 4;
     ee_ui_view_set_effect_multiplier(1.0f);
     return 0;
 }
