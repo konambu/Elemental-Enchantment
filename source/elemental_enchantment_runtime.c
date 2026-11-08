@@ -44,8 +44,8 @@ static unsigned int ally_seen_bits[2048];
 static unsigned int ally_seen_bit(void* character) {unsigned int x=(unsigned int)((U64)character>>4);x^=x>>16;x*=0x7feb352du;x^=x>>15;return x&65535u;}
 static int ally_seen_maybe(void* character) {unsigned int bit=ally_seen_bit(character);return (ally_seen_bits[bit>>5]&(1u<<(bit&31)))!=0;}
 static void ally_seen_remember(void* character) {unsigned int bit=ally_seen_bit(character);ally_seen_bits[bit>>5]|=1u<<(bit&31);}
-typedef struct {void* character;void* body;void* bone;void* scene;void* parent;void* node;void* effect;void* effect2;float applied_scale;int element;int secondary;} HandFire;
-static HandFire hand_fires[EE_ALLY_LIMIT*2];
+typedef struct {void* character;void* body;void* bone;void* scene;void* parent;void* node;void* effect;void* effect2;float applied_scale;int element;int secondary;} HandEffect;
+static HandEffect hand_effects[EE_ALLY_LIMIT*2];
 static void* guard; static DWORD internal; static int active,logged_full; static U64 serial;
 static char log_path[1024]; static MODULE self;
 static char settings_path[1024]; static int all_aptitudes; static float effect_multiplier=1.0f; static unsigned int xp_tenths=10,ui_scale_tenths=10; static int show_trails=1,show_impacts=1;
@@ -305,8 +305,8 @@ static void cleanup(Entry* e) {
 #endif
     if(e->effect2 && e->scene)particle_destroy(particle_manager(),e->effect2,e->scene);if(e->effect && e->scene)particle_destroy(particle_manager(),e->effect,e->scene);if(e->node && e->scene)node_destroy(e->scene,e->node);e->effect2=0;e->secondary=0;e->effect=0;e->node=0;e->scene=0;e->parent=0;e->element=0;e->applied_scale=0.0f;}
 static void erase(Entry* e) {cleanup(e);e->owner=0;e->blade=0;e->tag=0;}
-static void clear_hand(HandFire* h) {if(h->effect2 && h->scene)particle_destroy(particle_manager(),h->effect2,h->scene);if(h->effect && h->scene)particle_destroy(particle_manager(),h->effect,h->scene);if(h->node && h->scene)node_destroy(h->scene,h->node);h->character=0;h->body=0;h->bone=0;h->scene=0;h->parent=0;h->node=0;h->effect=0;h->effect2=0;h->secondary=0;h->element=0;h->applied_scale=0.0f;}
-static void clear_character_hands(void* character) {int i;if(!character)return;for(i=0;i<EE_ALLY_LIMIT*2;++i)if(hand_fires[i].character==character)clear_hand(&hand_fires[i]);}
+static void clear_hand(HandEffect* h) {if(h->effect2 && h->scene)particle_destroy(particle_manager(),h->effect2,h->scene);if(h->effect && h->scene)particle_destroy(particle_manager(),h->effect,h->scene);if(h->node && h->scene)node_destroy(h->scene,h->node);h->character=0;h->body=0;h->bone=0;h->scene=0;h->parent=0;h->node=0;h->effect=0;h->effect2=0;h->secondary=0;h->element=0;h->applied_scale=0.0f;}
+static void clear_character_hands(void* character) {int i;if(!character)return;for(i=0;i<EE_ALLY_LIMIT*2;++i)if(hand_effects[i].character==character)clear_hand(&hand_effects[i]);}
 static void* attach_hook(void* owner,const void* bone,void* object,const void* orientation,const void* offset) {
     void* tag=original_attach(owner,bone,object,orientation,offset);int i,pole;void** mesh;void* box;const Vec* max;float length;
     if(!active||internal==GetCurrentThreadId()||!tag||!object)return tag;
@@ -323,10 +323,10 @@ static void* attach_hook(void* owner,const void* bone,void* object,const void* o
 }
 static void detach_hook(void* owner,void* blade) {int i;if(internal==GetCurrentThreadId()){original_detach(owner,blade);return;}AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try {for(i=0;i<EE_TRACK_LIMIT;++i)if(entries[i].owner==owner && entries[i].blade==blade)erase(&entries[i]);} __finally {internal=0;ReleaseSRWLockExclusive(&guard);}original_detach(owner,blade);}
 static void detach_all_hook(void* owner) {int i;if(internal==GetCurrentThreadId()){original_detach_all(owner);return;}AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try {for(i=0;i<EE_TRACK_LIMIT;++i)if(entries[i].owner==owner)erase(&entries[i]);} __finally {internal=0;ReleaseSRWLockExclusive(&guard);}original_detach_all(owner);}
-static void clear_hook(void* scene) {int i;if(internal==GetCurrentThreadId()){original_clear(scene);return;}AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try {impact_clear_scene(scene);clear_crossbow_scene(scene);for(i=0;i<EE_TRACK_LIMIT;++i)if(entries[i].blade && (!entries[i].scene || entries[i].scene==scene))erase(&entries[i]);for(i=0;i<EE_ALLY_LIMIT*2;++i)if(hand_fires[i].scene==scene)clear_hand(&hand_fires[i]);for(i=0;i<EE_ALLY_LIMIT;++i){allies[i].character=0;allies[i].body=0;}} __finally {internal=0;ReleaseSRWLockExclusive(&guard);}original_clear(scene);}
-static void entity_hook(void* scene,void* object) {int i;if(internal==GetCurrentThreadId()){original_destroy_entity(scene,object);return;}AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try {for(i=0;i<EE_TRACK_LIMIT;++i)if(entries[i].owner==object || entries[i].blade==object)erase(&entries[i]);for(i=0;i<EE_ALLY_LIMIT*2;++i)if(hand_fires[i].body==object)clear_hand(&hand_fires[i]);forget_body(object);} __finally {internal=0;ReleaseSRWLockExclusive(&guard);}original_destroy_entity(scene,object);}
-static void node_hook(void* scene,void* node) {int i;if(internal==GetCurrentThreadId()){original_destroy_node(scene,node);return;}AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try {impact_clear_parent(node);clear_crossbow_source(node);for(i=0;i<EE_TRACK_LIMIT;++i)if(entries[i].parent==node)erase(&entries[i]);for(i=0;i<EE_ALLY_LIMIT*2;++i)if(hand_fires[i].parent==node)clear_hand(&hand_fires[i]);} __finally {internal=0;ReleaseSRWLockExclusive(&guard);}original_destroy_node(scene,node);}
-static void scene_detach_hook(void* node,void* object) {int i;if(internal==GetCurrentThreadId()){original_scene_detach(node,object);return;}AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try {for(i=0;i<EE_TRACK_LIMIT;++i)if(entries[i].owner==object)cleanup(&entries[i]);for(i=0;i<EE_ALLY_LIMIT*2;++i)if(hand_fires[i].body==object)clear_hand(&hand_fires[i]);} __finally {internal=0;ReleaseSRWLockExclusive(&guard);}original_scene_detach(node,object);}
+static void clear_hook(void* scene) {int i;if(internal==GetCurrentThreadId()){original_clear(scene);return;}AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try {impact_clear_scene(scene);clear_crossbow_scene(scene);for(i=0;i<EE_TRACK_LIMIT;++i)if(entries[i].blade && (!entries[i].scene || entries[i].scene==scene))erase(&entries[i]);for(i=0;i<EE_ALLY_LIMIT*2;++i)if(hand_effects[i].scene==scene)clear_hand(&hand_effects[i]);for(i=0;i<EE_ALLY_LIMIT;++i){allies[i].character=0;allies[i].body=0;}} __finally {internal=0;ReleaseSRWLockExclusive(&guard);}original_clear(scene);}
+static void entity_hook(void* scene,void* object) {int i;if(internal==GetCurrentThreadId()){original_destroy_entity(scene,object);return;}AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try {for(i=0;i<EE_TRACK_LIMIT;++i)if(entries[i].owner==object || entries[i].blade==object)erase(&entries[i]);for(i=0;i<EE_ALLY_LIMIT*2;++i)if(hand_effects[i].body==object)clear_hand(&hand_effects[i]);forget_body(object);} __finally {internal=0;ReleaseSRWLockExclusive(&guard);}original_destroy_entity(scene,object);}
+static void node_hook(void* scene,void* node) {int i;if(internal==GetCurrentThreadId()){original_destroy_node(scene,node);return;}AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try {impact_clear_parent(node);clear_crossbow_source(node);for(i=0;i<EE_TRACK_LIMIT;++i)if(entries[i].parent==node)erase(&entries[i]);for(i=0;i<EE_ALLY_LIMIT*2;++i)if(hand_effects[i].parent==node)clear_hand(&hand_effects[i]);} __finally {internal=0;ReleaseSRWLockExclusive(&guard);}original_destroy_node(scene,node);}
+static void scene_detach_hook(void* node,void* object) {int i;if(internal==GetCurrentThreadId()){original_scene_detach(node,object);return;}AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try {for(i=0;i<EE_TRACK_LIMIT;++i)if(entries[i].owner==object)cleanup(&entries[i]);for(i=0;i<EE_ALLY_LIMIT*2;++i)if(hand_effects[i].body==object)clear_hand(&hand_effects[i]);} __finally {internal=0;ReleaseSRWLockExclusive(&guard);}original_scene_detach(node,object);}
 static void free_tag_hook(void* skeleton,void* tag) {int i;if(internal==GetCurrentThreadId()){original_free_tag(skeleton,tag);return;}AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try {for(i=0;i<EE_TRACK_LIMIT;++i)if(entries[i].tag==tag && tag)erase(&entries[i]);} __finally {internal=0;ReleaseSRWLockExclusive(&guard);}original_free_tag(skeleton,tag);}
 static void free_object_hook(void* skeleton,void* object) {int i;if(internal==GetCurrentThreadId()){original_free_object(skeleton,object);return;}AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();__try {for(i=0;i<EE_TRACK_LIMIT;++i)if(entries[i].blade==object && object)erase(&entries[i]);} __finally {internal=0;ReleaseSRWLockExclusive(&guard);}original_free_object(skeleton,object);}
 #ifdef EE_ENABLE_PERSISTENCE
@@ -505,18 +505,22 @@ static void* create_secondary_effect(void* manager,void* scene,void* node,const 
 #include "elemental_crossbow_visual.inl"
 static float visual_scale(int level,float glow)
 {float scale=level>=100?1.15f:(level>=80?1.1f:(level>=40?1.0f:(level>=20?.9f:.8f)));return glow>0.0f?scale*1.3f:scale;}
+static const String* element_template(int element,const String* fire,const String* lightning,const String* wind,const String* water,const String* ice)
+{
+    switch(element){case 5:return ice;case 4:return water;case 3:return wind;case 2:return lightning;default:return fire;}
+}
 static void update_hands(void* manager,float dt) {
     int i,k;const float bounds[6]={0,0,0,20,20,20};String fire={{0},21,21,0},light={{0},26,26,0},wind={{0},21,21,0},water={{0},22,22,0},ice={{0},20,20,0};fire.text.heap="SB_Prototype_HandFire";light.text.heap="SB_Prototype_LightningHand";wind.text.heap="SB_Prototype_WindHand";water.text.heap="SB_Prototype_WaterHand";ice.text.heap="SB_Prototype_IceHand";
-    for(i=0;i<EE_ALLY_LIMIT;++i)for(k=0;k<2;++k){Ally* a=&allies[i];HandFire* h=&hand_fires[i*2+k];void* bone=k?a->right:a->left;void* parent;const Vec* p;const Quat* q;
+    for(i=0;i<EE_ALLY_LIMIT;++i)for(k=0;k<2;++k){Ally* a=&allies[i];HandEffect* h=&hand_effects[i*2+k];void* bone=k?a->right:a->left;void* parent;const Vec* p;const Quat* q;
         if(!a->character||!a->body||!a->unarmed||!a->element||!bone){if(h->effect)clear_hand(h);continue;}
         parent=parent_node(a->body);if(!parent){if(h->effect)clear_hand(h);continue;}
         if(h->effect && (h->character!=a->character||h->body!=a->body||h->bone!=bone||h->parent!=parent||h->element!=a->element))clear_hand(h);
         if(!h->effect){String name={{"EE_H00000000"},12,15,0};unsigned int n=(unsigned int)++serial,j;h->character=a->character;h->body=a->body;h->bone=bone;h->parent=parent;h->scene=node_scene(parent);if(!h->scene){clear_hand(h);continue;}
-            const String* tmpl=a->element==5?&ice:(a->element==4?&water:(a->element==3?&wind:(a->element==2?&light:&fire)));if(!particle_template(manager,tmpl)){clear_hand(h);continue;}h->element=a->element;for(j=0;j<8;++j)name.text.small[4+j]="0123456789abcdef"[(n>>(28-j*4))&15];h->effect=particle_create(manager,&name,tmpl,h->scene);h->node=node_create(h->scene,0);if(!h->effect||!h->node){clear_hand(h);continue;}
+            const String* tmpl=element_template(a->element,&fire,&light,&wind,&water,&ice);if(!particle_template(manager,tmpl)){clear_hand(h);continue;}h->element=a->element;for(j=0;j<8;++j)name.text.small[4+j]="0123456789abcdef"[(n>>(28-j*4))&15];h->effect=particle_create(manager,&name,tmpl,h->scene);h->node=node_create(h->scene,0);if(!h->effect||!h->node){clear_hand(h);continue;}
             node_add(parent,h->node);node_attach(h->node,h->effect);particle_local(h->effect,1);set_queue(h->effect,84);particle_start(h->effect);particle_bounds(h->effect,0,0);
         }
         if(h->effect2&&h->secondary!=a->secondary){particle_destroy(manager,h->effect2,h->scene);h->effect2=0;h->secondary=0;}
-        if(a->secondary&&!h->effect2){const String* second=a->secondary==5?&ice:(a->secondary==4?&water:(a->secondary==3?&wind:(a->secondary==2?&light:&fire)));h->effect2=create_secondary_effect(manager,h->scene,h->node,second,0);if(h->effect2)h->secondary=a->secondary;}
+        if(a->secondary&&!h->effect2){const String* second=element_template(a->secondary,&fire,&light,&wind,&water,&ice);h->effect2=create_secondary_effect(manager,h->scene,h->node,second,0);if(h->effect2)h->secondary=a->secondary;}
         {float scale=visual_scale(a->level,a->hit_glow);if(scale!=h->applied_scale){Vec size={scale,scale,scale};node_scale(h->node,&size);h->applied_scale=scale;}}
         p=tag_position(bone);q=tag_rotation(bone);if(p&&q){node_position(h->node,p);node_rotation(h->node,q->w,q->x,q->y,q->z);}particle_update(h->effect,dt);set_aabb(h->effect,bounds);
         if(h->effect2){particle_update(h->effect2,dt);set_aabb(h->effect2,bounds);}
@@ -528,7 +532,7 @@ static void update(float dt) {
     if(dt<0 || dt>.1f)dt=.016f;manager=particle_manager();if(!manager || !particle_template(manager,&fire))return;
     AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();
     __try {for(i=0;i<EE_TRACK_LIMIT;++i)if(entries[i].blade) {
-        Entry* e=&entries[i];Ally* ally=find_ally(e->owner);void* parent;const Vec* p;const Quat* q;int element=ally?ally->element:0,secondary=ally?ally->secondary:0;const String* tmpl=element==5?&ice:(element==4?&water:(element==3?&wind:(element==2?&light:&fire)));e->level=ally?ally->level:0;
+        Entry* e=&entries[i];Ally* ally=find_ally(e->owner);void* parent;const Vec* p;const Quat* q;int element=ally?ally->element:0,secondary=ally?ally->secondary:0;const String* tmpl=element_template(element,&fire,&light,&wind,&water,&ice);e->level=ally?ally->level:0;
         if(!element||!ally->melee_weapon){if(e->effect)cleanup(e);if(!ally&&GetTickCount64()-e->born>5000)erase(e);continue;}if(e->effect && e->element!=element)cleanup(e);
         parent=parent_node(e->owner);
         if(!parent) {cleanup(e);continue;}if(e->parent && e->parent!=parent)cleanup(e);
@@ -541,7 +545,7 @@ static void update(float dt) {
             set_queue(e->effect,84);particle_start(e->effect);particle_bounds(e->effect,0,0);
         }
         if(e->effect2&&e->secondary!=secondary){particle_destroy(manager,e->effect2,e->scene);e->effect2=0;e->secondary=0;}
-        if(secondary&&!e->effect2){float start=e->length*(e->pole?.45f:.12f),end=e->length*.98f;const String* second=secondary==5?&ice:(secondary==4?&water:(secondary==3?&wind:(secondary==2?&light:&fire)));e->effect2=create_secondary_effect(manager,e->scene,e->node,second,end-start);if(e->effect2)e->secondary=secondary;}
+        if(secondary&&!e->effect2){float start=e->length*(e->pole?.45f:.12f),end=e->length*.98f;const String* second=element_template(secondary,&fire,&light,&wind,&water,&ice);e->effect2=create_secondary_effect(manager,e->scene,e->node,second,end-start);if(e->effect2)e->secondary=secondary;}
 #ifdef EE_ICE_OVERLAY_EXPERIMENTAL
         frost_update(e,element==5||secondary==5);
 #endif
@@ -600,7 +604,7 @@ static void gpu_hook(void* world,float dt) {original_gpu(world,dt);if(active)__t
 #ifdef EE_FROST_RELOAD_DEV
     frost_dev_poll();
 #endif
-    update(dt);} __except(1) {active=0;logline("DISABLED: sword-fire update failed. Restart without probe.\r\n");}}
+    update(dt);} __except(1) {active=0;logline("DISABLED: enchantment visual update failed.\r\n");}}
 static int distinct_hook_targets(void* a,void* b){return a&&b&&a!=b;}
 static int module_matches(MODULE m,unsigned int stamp,unsigned int size) {unsigned char* b=(unsigned char*)m;unsigned int p;if(!b || *(unsigned short*)b!=0x5a4d)return 0;p=*(unsigned int*)(b+0x3c);return *(unsigned int*)(b+p)==0x4550 && *(unsigned int*)(b+p+8)==stamp && *(unsigned int*)(b+p+80)==size;}
 __declspec(dllexport) void startPlugin(void) {
@@ -1154,12 +1158,12 @@ __declspec(dllexport) void probeTestElement(int element) {if(allies[0].character
 __declspec(dllexport) void probeTestVisualSecondary(int element) {if(allies[0].character){allies[0].secondary=element;allies[0].level=100;}}
 __declspec(dllexport) int probeTestVisualStages(void) {if(visual_scale(0,0.0f)>.801f||visual_scale(20,0.0f)<.899f||visual_scale(40,0.0f)<.999f||visual_scale(80,0.0f)<1.099f||visual_scale(100,0.0f)<1.149f||visual_scale(40,.1f)<1.299f)return 0;return 1;}
 __declspec(dllexport) int probeTestVisualSecondCount(void) {return entries[0].effect2?(int)particle_count(entries[0].effect2):-1;}
-__declspec(dllexport) int probeTestVisualSecondHandCount(int side) {return side>=0&&side<2&&hand_fires[side].effect2?(int)particle_count(hand_fires[side].effect2):-1;}
+__declspec(dllexport) int probeTestVisualSecondHandCount(int side) {return side>=0&&side<2&&hand_effects[side].effect2?(int)particle_count(hand_effects[side].effect2):-1;}
 __declspec(dllexport) void probeTestExpirePending(void) {entries[0].born=GetTickCount64()-6000;}
 __declspec(dllexport) int probeTestTracked(void) {return entries[0].blade!=0;}
 __declspec(dllexport) int probeTestBladeElement(void) {return entries[0].effect?entries[0].element:0;}
-__declspec(dllexport) int probeTestHandElement(int side) {return side>=0 && side<2 && hand_fires[side].effect?hand_fires[side].element:0;}
-__declspec(dllexport) int probeTestHandCount(int side) {HandFire* h;if(side<0||side>1)return -1;h=&hand_fires[side];return h->effect?(int)particle_count(h->effect):-1;}
+__declspec(dllexport) int probeTestHandElement(int side) {return side>=0 && side<2 && hand_effects[side].effect?hand_effects[side].element:0;}
+__declspec(dllexport) int probeTestHandCount(int side) {HandEffect* h;if(side<0||side>1)return -1;h=&hand_effects[side];return h->effect?(int)particle_count(h->effect):-1;}
 __declspec(dllexport) int probeTestStep(float dt) {update(dt);return entries[0].effect?(int)particle_count(entries[0].effect):-1;}
 #ifdef EE_ENABLE_TRAIL
 __declspec(dllexport) int probeTestTrailLifecycle(void)
