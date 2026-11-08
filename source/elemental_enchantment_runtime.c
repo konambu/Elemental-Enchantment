@@ -1231,7 +1231,7 @@ static int character_hit_hook(
                             ee_affinity_award_hit_rate_scaled(
                                 &r->affinity, all_aptitudes, xp_tenths)) {
                             int k;
-                            if (show_impacts && ee_affinity_level(&r->affinity, 0) >= 40) {
+                            if (show_impacts && ee_affinity_level(&r->affinity) >= 40) {
                                 impact_queue_character(
                                     target, (int)r->affinity.selected, (int)r->affinity.secondary);
                                 for (k = 0; k < EE_TRACKED_ACTOR_LIMIT; ++k)
@@ -1283,7 +1283,7 @@ static void *crossbow_wound_hook(void *medical,
                 __try {
                     if (combat_affinity_locked(attacker, character_stat, &a)) {
                         float pierce;
-                        if (show_impacts && player && ee_affinity_level(&a, 0) >= 40 &&
+                        if (show_impacts && player && ee_affinity_level(&a) >= 40 &&
                             crossbow_impact_sample(bolt, &impact_scene, &impact_position)) {
                             impact_element = (int)a.selected;
                             impact_secondary = (int)a.secondary;
@@ -1565,7 +1565,7 @@ static void character_update_hook(void *character) {
                             element = (int)r->affinity.selected;
                             if (!r->read_only) {
                                 secondary = (int)r->affinity.secondary;
-                                level = (int)ee_affinity_level(&r->affinity, 0);
+                                level = (int)ee_affinity_level(&r->affinity);
                             }
                         }
                     }

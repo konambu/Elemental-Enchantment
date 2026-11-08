@@ -58,7 +58,7 @@ static void selection_title(char out[256], const EEAffinity *a) {
     add(out,
         i,
         256,
-        ee_affinity_level(a, 0) < 50 ? l->locked : (e <= 5 ? l->element[e] : l->element[0]));
+        ee_affinity_level(a) < 50 ? l->locked : (e <= 5 ? l->element[e] : l->element[0]));
 }
 void ee_ui_view_init(EEUIView *v) {
     int i;
@@ -222,14 +222,14 @@ static void level_text(char out[128], const EEAffinity *a) {
     int i = 0;
     i = add(out, i, 128, ee_locale_get()->elemental);
     i = add(out, i, 128, "   ");
-    num(out, i, 128, ee_affinity_level(a, 0));
+    num(out, i, 128, ee_affinity_level(a));
 }
 static unsigned int xp_progress_percent(const EEAffinity *a) {
     unsigned int level, xp, base, need;
     if (!a->selected || a->selected > 5)
         return 0;
     xp = a->xp[0];
-    level = ee_affinity_level(a, 0);
+    level = ee_affinity_level(a);
     if (level == EE_AFFINITY_MAX_LEVEL)
         return 100;
     base = ee_affinity_xp_for_level(level);
@@ -394,11 +394,11 @@ void ee_ui_view_sync(EEUIView *v,
         return;
     {
         char next[256];
-        milestone_text(next, ee_affinity_level(&v->model.affinity, 0));
+        milestone_text(next, ee_affinity_level(&v->model.affinity));
         a->caption(a->context, v->milestone, next);
     }
     {
-        unsigned int level = ee_affinity_level(&v->model.affinity, 0);
+        unsigned int level = ee_affinity_level(&v->model.affinity);
         unsigned int pct = ee_affinity_secondary_percent(&v->model.affinity);
         char text[128], title[256];
         int j = 0;
@@ -422,7 +422,7 @@ void ee_ui_view_sync(EEUIView *v,
     {
         char text[128], number[8];
         unsigned int pct = xp_progress_percent(&v->model.affinity),
-                     level = ee_affinity_level(&v->model.affinity, 0);
+                     level = ee_affinity_level(&v->model.affinity);
         int n = 0;
         a->progress(a->context, v->fill, pct);
         level_text(text, &v->model.affinity);
@@ -496,7 +496,7 @@ int ee_ui_view_click(EEUIView *v, const EEUIViewAPI *a, void *widget) {
         return 0;
     }
     if (widget == v->mode_second && v->model.visible) {
-        if (ee_affinity_level(&v->model.affinity, 0) >= 50)
+        if (ee_affinity_level(&v->model.affinity) >= 50)
             v->second_mode = 1;
         return 0;
     }

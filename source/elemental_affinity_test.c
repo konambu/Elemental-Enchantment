@@ -14,11 +14,11 @@ __declspec(dllexport) int ee_run_affinity_threshold_tests(void) {
         if (ee_affinity_xp_for_level(level) != expected)
             return 3;
         affinity.xp[0] = (unsigned short)expected;
-        if (ee_affinity_level(&affinity, 0) != level)
+        if (ee_affinity_level(&affinity) != level)
             return 4;
         if (level > 0) {
             affinity.xp[0] = (unsigned short)(expected - 1u);
-            if (ee_affinity_level(&affinity, 0) != level - 1u)
+            if (ee_affinity_level(&affinity) != level - 1u)
                 return 5;
         }
     }

@@ -428,7 +428,7 @@ __declspec(dllexport) int probeTestBossCombatAffinity(void) {
     boss_cache[(slot + 1) & 4095u].generation = 7;
     boss_cache[(slot + 1) & 4095u].boss_profile = 0;
     if (!combat_affinity_locked((void *)9, 0, &a) || a.selected != 1 || a.secondary != 2 ||
-        ee_affinity_level(&a, 0) != 80)
+        ee_affinity_level(&a) != 80)
         return 1;
     if (!ee_affinity_damage(&a, &d) || d.blunt <= 10.0f || d.armour <= 0.0f)
         return 2;

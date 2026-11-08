@@ -35,7 +35,7 @@ int ee_affinity_award_hit_rate(EEAffinity *s, int all_aptitudes);
 int ee_affinity_award_hit_rate_scaled(EEAffinity *s, int all_aptitudes, unsigned int tenths);
 int ee_affinity_award_hit(EEAffinity *);
 /** @brief Compute the shared Elemental level from accumulated total XP. */
-unsigned int ee_affinity_level(const EEAffinity *, unsigned int element);
+unsigned int ee_affinity_level(const EEAffinity *);
 /** @brief Total XP required for a level, capped at the maximum level. */
 unsigned int ee_affinity_xp_for_level(unsigned int level);
 typedef struct EEDamage {

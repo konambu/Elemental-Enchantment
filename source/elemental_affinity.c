@@ -52,13 +52,13 @@ int ee_affinity_select(EEAffinity *s, unsigned int element) {
 int ee_affinity_select_secondary(EEAffinity *s, unsigned int element) {
     if (!s || element > 5 || !s->selected || (element && element == s->selected))
         return 0;
-    if (element && ee_affinity_level(s, 0) < 50)
+    if (element && ee_affinity_level(s) < 50)
         return 0;
     s->secondary = element;
     return 1;
 }
 unsigned int ee_affinity_secondary_percent(const EEAffinity *s) {
-    unsigned int l = ee_affinity_level(s, 0);
+    unsigned int l = ee_affinity_level(s);
     return l < 50 ? 0 : l < 60 ? 25 : l < 70 ? 35 : l < 80 ? 45 : l < 90 ? 55 : l < 100 ? 65 : 75;
 }
 unsigned int ee_affinity_xp_for_level(unsigned int level) {
@@ -66,9 +66,9 @@ unsigned int ee_affinity_xp_for_level(unsigned int level) {
         level = EE_AFFINITY_MAX_LEVEL;
     return 4u * (20u * level + level * (level - 1u));
 }
-unsigned int ee_affinity_level(const EEAffinity *s, unsigned int element) {
+unsigned int ee_affinity_level(const EEAffinity *s) {
     unsigned int lo = 0, hi = EE_AFFINITY_MAX_LEVEL, total;
-    if (!s || element >= 5)
+    if (!s)
         return 0;
     total = s->xp[0];
     while (lo < hi) {
@@ -117,7 +117,7 @@ float ee_affinity_combat_speed(const EEAffinity *s, float speed) {
     float level, weight;
     if (!s || !(speed > 0.0f) || speed > 100.0f)
         return speed;
-    level = (float)ee_affinity_level(s, 0);
+    level = (float)ee_affinity_level(s);
     weight = element_weight(s, 3);
     return speed * (1.0f + weight * (.02f + level * .0008f));
 }
@@ -125,7 +125,7 @@ float ee_affinity_attack_speed(const EEAffinity *s, float speed) {
     float level, wind, light;
     if (!s || !(speed > 0.0f) || speed > 100.0f)
         return speed;
-    level = (float)ee_affinity_level(s, 0);
+    level = (float)ee_affinity_level(s);
     wind = element_weight(s, 3);
     light = element_weight(s, 2);
     return speed * (1.0f + wind * (.02f + level * .0008f) + light * (.01f + level * .0004f));
@@ -134,7 +134,7 @@ int ee_affinity_damage(const EEAffinity *s, EEDamage *d) {
     float level, scale, base, fire, light, water, ice;
     if (!s || !d || !s->selected || s->selected > 5)
         return 0;
-    level = (float)ee_affinity_level(s, 0);
+    level = (float)ee_affinity_level(s);
     scale = 0.05f + 0.001f * level;
     base = d->cut + d->blunt;
     if (base < 0.0f)
@@ -191,7 +191,7 @@ int ee_affinity_encode(const EEAffinity *s, int out[3]) {
     int i, j, all = 1;
     if (!s || !out || s->selected > 5 || s->secondary > 5 || s->xp[0] > EE_AFFINITY_MAX_XP ||
         s->xp_fraction >= 100u || s->secondary == s->selected && s->secondary ||
-        s->secondary && (!s->selected || ee_affinity_level(s, 0) < 50))
+        s->secondary && (!s->selected || ee_affinity_level(s) < 50))
         return 0;
     for (i = 0; i < 5; ++i) {
         if (s->rates[i] != 100)
@@ -239,7 +239,7 @@ int ee_affinity_decode(EEAffinity *s, const int in[3]) {
         for (i = 1; i < 5; ++i)
             tmp.xp[i] = 0;
         if (tmp.secondary &&
-            (!tmp.selected || tmp.selected == tmp.secondary || ee_affinity_level(&tmp, 0) < 50))
+            (!tmp.selected || tmp.selected == tmp.secondary || ee_affinity_level(&tmp) < 50))
             return 0;
         *s = tmp;
         return 1;
