@@ -48,7 +48,7 @@ python .\build.py --test
 python .\tools\run_native_checks.py
 ```
 
-The test DLL is separate from the normal plugin and should not be copied into the Workshop package. These checks do not replace in-game verification. `--frost-dev` and `--ice-experimental` build development variants; do not publish those as the normal plugin.
+The test DLL is separate from the normal plugin and should not be copied into the Workshop package. The runner also checks that the particle resources named by the runtime exist in the package. These checks do not replace in-game verification. `--frost-dev` and `--ice-experimental` build development variants; do not publish those as the normal plugin.
 
 ## Review and push source
 

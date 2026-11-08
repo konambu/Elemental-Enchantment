@@ -53,7 +53,7 @@ if test:
     extra += [
         'elemental_ui_model_test.c', 'elemental_ui_view_test.c', 'elemental_characters_test.c',
         'elemental_game_string_test.c', 'elemental_persistence_test.c',
-        'elemental_affinity_test.c',
+        'elemental_affinity_test.c', 'elemental_effect_templates_test.c',
     ]
 
 run_build([

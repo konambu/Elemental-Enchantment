@@ -66,7 +66,25 @@ def main():
                 print(result.stderr.strip())
         else:
             print(f"PASS {name}")
-    print(f"{len(CHECKS) - len(failed)}/{len(CHECKS)} checks passed")
+    try:
+        resource_check = subprocess.run(
+            [sys.executable, str(ROOT / "tools" / "check_particle_resources.py")],
+            capture_output=True,
+            text=True,
+            timeout=20,
+        )
+    except subprocess.TimeoutExpired:
+        failed.append("particle resources")
+        print("FAIL particle resources: timed out")
+    else:
+        if resource_check.returncode:
+            failed.append("particle resources")
+            print("FAIL particle resources")
+            print((resource_check.stdout + resource_check.stderr).strip())
+        else:
+            print("PASS particle resources")
+    total = len(CHECKS) + 1
+    print(f"{total - len(failed)}/{total} checks passed")
     return 1 if failed else 0
 
 
