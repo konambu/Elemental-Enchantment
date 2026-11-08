@@ -1064,6 +1064,12 @@ static const EEGameString *test_list_name(void *data, const EEGameString *list, 
     (void)index;
     return &name;
 }
+static const EEGameString *test_unreadable_list_name(void *data, const EEGameString *list, int index) {
+    (void)data;
+    (void)list;
+    (void)index;
+    return 0;
+}
 static const int *test_list_values(void *data, const EEGameString *list, int index) {
     (void)list;
     (void)index;
@@ -1143,6 +1149,19 @@ __declspec(dllexport) int probeTestPersistenceHooks(void) {
     test_handle_values[6] = 7;
     stats_destroy_hook(&stats);
     ee_persistence_forget(&persistence, 0, (void *)10);
+    {
+        int original_meta = data.value[0];
+        ee_persistence_init(&persistence);
+        gamedata_api.list_name = test_unreadable_list_name;
+        stats_load_hook(&stats, &data);
+        r = ee_persistence_bind(&persistence, &stats, (void *)9, 42, 7, 999, 1);
+        if (!r || !r->read_only)
+            return 9;
+        stats_save_hook(&stats, &data);
+        if (data.value[0] != original_meta)
+            return 10;
+        gamedata_api.list_name = test_list_name;
+    }
     active = 0;
     return 0;
 }
