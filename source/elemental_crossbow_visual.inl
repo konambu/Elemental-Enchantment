@@ -230,6 +230,7 @@ static void cb_update_hook(void *ranged, float dt, const void *target, const voi
                 cb_normalise_quat(&aim);
             }
         } __except (1) {
+            /* Rotation is optional; retain the default orientation. */
         }
         AcquireSRWLockExclusive(&guard);
         __try {

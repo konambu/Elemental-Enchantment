@@ -654,7 +654,10 @@ static int boss_profile_for_character(void *character) {
         unsigned int j;
         for (j = 0; text && j < ee_boss_profile_count(); ++j) {
             const EEBossProfile *boss_entry = ee_boss_profile_at(j);
-            const char *target = boss_entry ? boss_entry->id : 0;
+            const char *target;
+            if (!boss_entry || !boss_entry->id)
+                continue;
+            target = boss_entry->id;
             for (i = 0; i < sid->size && target[i] && text[i] == target[i]; ++i) {
             }
             if (i == sid->size && !target[i]) {
@@ -1322,6 +1325,7 @@ static void *crossbow_wound_hook(void *medical,
             d->bleed = modified.bleed - bonus.bleed;
             d->armour = modified.armour - bonus.armour;
         } __except (1) {
+            /* The target damage buffer may no longer be writable. */
         }
     } else
         result = original_crossbow_wound(

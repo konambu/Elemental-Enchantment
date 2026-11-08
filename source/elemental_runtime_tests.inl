@@ -361,6 +361,27 @@ static const void *test_handle(void *c) {
     (void)c;
     return test_handle_values;
 }
+__declspec(dllexport) int probeTestBossProfileLookup(void) {
+    union { U64 alignment; unsigned char bytes[0x50]; } character = {0};
+    union { U64 alignment; unsigned char bytes[0x80]; } data = {0};
+    String *id = (String *)(data.bytes + 0x58);
+    int profile;
+    character_handle = test_handle;
+    test_handle_values[5] = 4321;
+    test_handle_values[6] = 7;
+    *(void **)(character.bytes + 0x40) = data.bytes;
+    if (!ee_game_string_init(id, "17225-Dialogue.mod", 18, 18))
+        return 1;
+    profile = boss_profile_for_character(character.bytes);
+    if (profile != 1 || boss_profile_for_character(character.bytes) != profile)
+        return 2;
+    test_handle_values[6] = 8;
+    if (!ee_game_string_init(id, "unknown.mod", 11, 15))
+        return 3;
+    if (boss_profile_for_character(character.bytes) != 0)
+        return 4;
+    return 0;
+}
 #ifdef EE_ENABLE_PERSISTENCE
 static void *test_stats(void *c) {
     (void)c;

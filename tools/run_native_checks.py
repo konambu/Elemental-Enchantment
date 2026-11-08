@@ -22,6 +22,7 @@ CHECKS = (
     "probeTestEffectMultiplier",
     "probeTestMcmRegistration",
     "probeTestAllyHistoryFilter",
+    "probeTestBossProfileLookup",
     "probeTestBossCombatAffinity",
     "probeTestHitXP",
     "probeTestHookTargets",
