@@ -6,11 +6,13 @@ typedef void* MODULE;
 typedef struct { union { char small[16]; const char* heap; } text; U64 size,capacity,allocator; } String;
 typedef struct { float x,y,z; } Vec;
 typedef struct { float w,x,y,z; } Quat;
+static const String* element_template(String* storage,int kind,int element);
 #ifdef EE_ENABLE_PERSISTENCE
 #include "elemental_persistence.h"
 #include "elemental_gamedata.h"
 #endif
 #include "elemental_boss_profiles.h"
+#include "elemental_effect_templates.h"
 #ifdef EE_ENABLE_UI
 #include "elemental_mygui.h"
 #include "elemental_localization.h"
@@ -475,22 +477,27 @@ static void* create_secondary_effect(void* manager,void* scene,void* node,const 
 #include "elemental_crossbow_visual.inl"
 static float visual_scale(int level,float glow)
 {float scale=level>=100?1.15f:(level>=80?1.1f:(level>=40?1.0f:(level>=20?.9f:.8f)));return glow>0.0f?scale*1.3f:scale;}
-static const String* element_template(int element,const String* fire,const String* lightning,const String* wind,const String* water,const String* ice)
+static const String* element_template(String* storage,int kind,int element)
 {
-    switch(element){case 5:return ice;case 4:return water;case 3:return wind;case 2:return lightning;default:return fire;}
+    if(kind<EE_TEMPLATE_HAND||kind>EE_TEMPLATE_CROSSBOW)return 0;
+    if(element<1||element>5){if(kind==EE_TEMPLATE_IMPACT)return 0;element=1;}
+    const EEEffectTemplate* source=ee_effect_template(kind,element);
+    if(!storage||!source)return 0;
+    storage->text.heap=source->resource;storage->size=source->size;storage->capacity=source->capacity;storage->allocator=0;
+    return storage;
 }
 static void update_hands(void* manager,float dt) {
-    int i,k;const float bounds[6]={0,0,0,20,20,20};String fire={{0},21,21,0},light={{0},26,26,0},wind={{0},21,21,0},water={{0},22,22,0},ice={{0},20,20,0};fire.text.heap="SB_Prototype_HandFire";light.text.heap="SB_Prototype_LightningHand";wind.text.heap="SB_Prototype_WindHand";water.text.heap="SB_Prototype_WaterHand";ice.text.heap="SB_Prototype_IceHand";
+    int i,k;const float bounds[6]={0,0,0,20,20,20};
     for(i=0;i<EE_ALLY_LIMIT;++i)for(k=0;k<2;++k){Ally* a=&allies[i];HandEffect* h=&hand_effects[i*2+k];void* bone=k?a->right:a->left;void* parent;const Vec* p;const Quat* q;
         if(!a->character||!a->body||!a->unarmed||!a->element||!bone){if(h->effect)clear_hand(h);continue;}
         parent=parent_node(a->body);if(!parent){if(h->effect)clear_hand(h);continue;}
         if(h->effect && (h->character!=a->character||h->body!=a->body||h->bone!=bone||h->parent!=parent||h->element!=a->element))clear_hand(h);
-        if(!h->effect){String name={{"EE_H00000000"},12,15,0};unsigned int n=(unsigned int)++serial,j;h->character=a->character;h->body=a->body;h->bone=bone;h->parent=parent;h->scene=node_scene(parent);if(!h->scene){clear_hand(h);continue;}
-            const String* tmpl=element_template(a->element,&fire,&light,&wind,&water,&ice);if(!particle_template(manager,tmpl)){clear_hand(h);continue;}h->element=a->element;for(j=0;j<8;++j)name.text.small[4+j]="0123456789abcdef"[(n>>(28-j*4))&15];h->effect=particle_create(manager,&name,tmpl,h->scene);h->node=node_create(h->scene,0);if(!h->effect||!h->node){clear_hand(h);continue;}
+        if(!h->effect){String name={{"EE_H00000000"},12,15,0},template_storage;unsigned int n=(unsigned int)++serial,j;h->character=a->character;h->body=a->body;h->bone=bone;h->parent=parent;h->scene=node_scene(parent);if(!h->scene){clear_hand(h);continue;}
+            const String* tmpl=element_template(&template_storage,EE_TEMPLATE_HAND,a->element);if(!particle_template(manager,tmpl)){clear_hand(h);continue;}h->element=a->element;for(j=0;j<8;++j)name.text.small[4+j]="0123456789abcdef"[(n>>(28-j*4))&15];h->effect=particle_create(manager,&name,tmpl,h->scene);h->node=node_create(h->scene,0);if(!h->effect||!h->node){clear_hand(h);continue;}
             node_add(parent,h->node);node_attach(h->node,h->effect);particle_local(h->effect,1);set_queue(h->effect,84);particle_start(h->effect);particle_bounds(h->effect,0,0);
         }
         if(h->effect2&&h->secondary!=a->secondary){particle_destroy(manager,h->effect2,h->scene);h->effect2=0;h->secondary=0;}
-        if(a->secondary&&!h->effect2){const String* second=element_template(a->secondary,&fire,&light,&wind,&water,&ice);h->effect2=create_secondary_effect(manager,h->scene,h->node,second,0);if(h->effect2)h->secondary=a->secondary;}
+        if(a->secondary&&!h->effect2){String second_storage;const String* second=element_template(&second_storage,EE_TEMPLATE_HAND,a->secondary);h->effect2=create_secondary_effect(manager,h->scene,h->node,second,0);if(h->effect2)h->secondary=a->secondary;}
         {float scale=visual_scale(a->level,a->hit_glow);if(scale!=h->applied_scale){Vec size={scale,scale,scale};node_scale(h->node,&size);h->applied_scale=scale;}}
         p=tag_position(bone);q=tag_rotation(bone);if(p&&q){node_position(h->node,p);node_rotation(h->node,q->w,q->x,q->y,q->z);}particle_update(h->effect,dt);set_aabb(h->effect,bounds);
         if(h->effect2){particle_update(h->effect2,dt);set_aabb(h->effect2,bounds);}
@@ -498,11 +505,10 @@ static void update_hands(void* manager,float dt) {
 }
 static void update(float dt) {
     int i; void* manager; const float bounds[6]={0,0,0,60,60,60};
-    String fire={{0},17,17,0},light={{0},27,27,0},wind={{0},22,22,0},water={{0},23,23,0},ice={{0},21,21,0};fire.text.heap="SB_Prototype_Fire";light.text.heap="SB_Prototype_LightningBlade";wind.text.heap="SB_Prototype_WindBlade";water.text.heap="SB_Prototype_WaterBlade";ice.text.heap="SB_Prototype_IceBlade";
-    if(dt<0 || dt>.1f)dt=.016f;manager=particle_manager();if(!manager || !particle_template(manager,&fire))return;
+    String fire_storage;if(dt<0 || dt>.1f)dt=.016f;manager=particle_manager();if(!manager || !particle_template(manager,element_template(&fire_storage,EE_TEMPLATE_BLADE,1)))return;
     AcquireSRWLockExclusive(&guard);internal=GetCurrentThreadId();
     __try {for(i=0;i<EE_TRACK_LIMIT;++i)if(entries[i].blade) {
-        Entry* e=&entries[i];Ally* ally=find_ally(e->owner);void* parent;const Vec* p;const Quat* q;int element=ally?ally->element:0,secondary=ally?ally->secondary:0;const String* tmpl=element_template(element,&fire,&light,&wind,&water,&ice);e->level=ally?ally->level:0;
+        Entry* e=&entries[i];Ally* ally=find_ally(e->owner);void* parent;const Vec* p;const Quat* q;int element=ally?ally->element:0,secondary=ally?ally->secondary:0;String template_storage;const String* tmpl=element_template(&template_storage,EE_TEMPLATE_BLADE,element);e->level=ally?ally->level:0;
         if(!element||!ally->melee_weapon){if(e->effect)cleanup(e);if(!ally&&GetTickCount64()-e->born>5000)erase(e);continue;}if(e->effect && e->element!=element)cleanup(e);
         parent=parent_node(e->owner);
         if(!parent) {cleanup(e);continue;}if(e->parent && e->parent!=parent)cleanup(e);
@@ -515,7 +521,7 @@ static void update(float dt) {
             set_queue(e->effect,84);particle_start(e->effect);particle_bounds(e->effect,0,0);
         }
         if(e->effect2&&e->secondary!=secondary){particle_destroy(manager,e->effect2,e->scene);e->effect2=0;e->secondary=0;}
-        if(secondary&&!e->effect2){float start=e->length*(e->pole?.45f:.12f),end=e->length*.98f;const String* second=element_template(secondary,&fire,&light,&wind,&water,&ice);e->effect2=create_secondary_effect(manager,e->scene,e->node,second,end-start);if(e->effect2)e->secondary=secondary;}
+        if(secondary&&!e->effect2){float start=e->length*(e->pole?.45f:.12f),end=e->length*.98f;String second_storage;const String* second=element_template(&second_storage,EE_TEMPLATE_BLADE,secondary);e->effect2=create_secondary_effect(manager,e->scene,e->node,second,end-start);if(e->effect2)e->secondary=secondary;}
 #ifdef EE_ICE_OVERLAY_EXPERIMENTAL
         frost_update(e,element==5||secondary==5);
 #endif
@@ -755,7 +761,7 @@ static void* impact_test_parent(void* body){return body?(void*)13:0;}
 static void* impact_test_scene(void* node){return node?(void*)123:0;}
 static void* impact_test_derived(void* node,Vec* out){if(!node)return 0;*out=(Vec){1,2,3};return out;}
 __declspec(dllexport) int probeTestImpactPositions(void){int i;Vec p;void* scene=0;for(i=0;i<EE_IMPACT_LIMIT;++i)impacts[i]=(EEImpact){0};character_appearance=impact_test_appearance;appearance_body=impact_test_body;parent_node=impact_test_parent;node_scene=impact_test_scene;trail_derive=impact_test_derived;particle_manager=0;impact_queue_character((void*)1,4,5);if(impacts[0].scene!=(void*)123||impacts[0].parent!=(void*)13||impacts[0].position.y!=10||impacts[0].element!=4||impacts[0].secondary!=5)return 1;impact_clear_parent((void*)13);if(impacts[0].scene)return 3;cb_flights[0]=(CBFlight){0};cb_flights[0].projectile=(void*)20;cb_flights[0].source=(void*)13;cb_flights[0].frames=1;cb_flights[0].offset=(Vec){10,20,30};if(!crossbow_impact_sample((void*)20,&scene,&p)||scene!=(void*)123||p.x!=11||p.y!=22||p.z!=33)return 2;cb_flights[0]=(CBFlight){0};return 0;}
-__declspec(dllexport) int probeTestImpactQueue(void){Vec p={1,2,3};int i;void* scene=(void*)123;for(i=0;i<EE_IMPACT_LIMIT;++i)impacts[i]=(EEImpact){0};if(impact_queue_position(scene,&p,0,0)||impact_queue_position(0,&p,1,0))return 1;for(i=0;i<EE_IMPACT_LIMIT;++i)if(!impact_queue_position(scene,&p,1,2))return 2;if(impact_queue_position(scene,&p,1,0))return 3;particle_manager=0;impact_clear_scene(scene);for(i=0;i<EE_IMPACT_LIMIT;++i)if(impacts[i].scene)return 4;for(i=1;i<=5;++i)if(!impact_template(i))return 5;return 0;}
+__declspec(dllexport) int probeTestImpactQueue(void){Vec p={1,2,3};int i;void* scene=(void*)123;for(i=0;i<EE_IMPACT_LIMIT;++i)impacts[i]=(EEImpact){0};if(impact_queue_position(scene,&p,0,0)||impact_queue_position(0,&p,1,0))return 1;for(i=0;i<EE_IMPACT_LIMIT;++i)if(!impact_queue_position(scene,&p,1,2))return 2;if(impact_queue_position(scene,&p,1,0))return 3;particle_manager=0;impact_clear_scene(scene);for(i=0;i<EE_IMPACT_LIMIT;++i)if(impacts[i].scene)return 4;for(i=1;i<=5;++i)if(!ee_effect_template(EE_TEMPLATE_IMPACT,i))return 5;return 0;}
 __declspec(dllexport) int probeTestImpactSetting(void){Vec p={1,2,3};int i;for(i=0;i<EE_IMPACT_LIMIT;++i)impacts[i]=(EEImpact){0};particle_manager=0;show_impacts=0;if(impact_queue_position((void*)123,&p,1,0))return 1;show_impacts=1;if(!impact_queue_position((void*)123,&p,1,0))return 2;show_impacts=0;impact_update(0,.016f);if(impacts[0].scene)return 3;show_impacts=1;return 0;}
 __declspec(dllexport) float probeTestMultiplierFromIni(const char* path){unsigned i;if(!path)return -1.0f;for(i=0;i<sizeof(settings_path)-1&&path[i];++i)settings_path[i]=path[i];settings_path[i]=0;reload_settings();return effect_multiplier;}
 __declspec(dllexport) int probeTestImpactSettingFromIni(const char* path){if(!path)return -1;probeTestMultiplierFromIni(path);return show_impacts;}

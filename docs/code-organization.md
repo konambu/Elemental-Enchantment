@@ -4,7 +4,9 @@
 
 `source/elemental_enchantment_runtime.c` owns the Kenshi and Ogre hooks, shared runtime state, and plugin startup. It includes the private runtime fragments for trails, impacts, crossbow visuals, and UI because those features still share engine pointers and state with the hooks.
 
-The standalone `elemental_*.c` modules contain affinity rules, character state, persistence, GameData access, localization, and UI model/view logic. Keep engine-specific hook installation in the runtime coordinator unless a module boundary can be given a small explicit interface.
+The standalone `elemental_*.c` modules contain affinity rules, character state, persistence, GameData access, localization, UI model/view logic, boss profiles, and the element-to-particle resource table. Add future element visual resources to `elemental_effect_templates.c`; it maps the same five elements across hand, blade, impact, and crossbow effects.
+
+Keep engine-specific hook installation in the runtime coordinator unless a module boundary can be given a small explicit interface.
 
 ## Stable game data names
 

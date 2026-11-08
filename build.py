@@ -28,7 +28,7 @@ if '--frost-dev' in sys.argv:
 if '--ice-experimental' in sys.argv:
     target=out/('IceSceneNodeTest.dll' if test else 'IceSceneNodeTrial.dll')
     flags+=['/DEE_ICE_OVERLAY_EXPERIMENTAL']
-extra=['elemental_affinity.c','elemental_save.c','elemental_gamedata.c','elemental_characters.c','elemental_persistence.c','elemental_boss_profiles.c',
+extra=['elemental_affinity.c','elemental_save.c','elemental_gamedata.c','elemental_characters.c','elemental_persistence.c','elemental_boss_profiles.c','elemental_effect_templates.c',
        'elemental_localization.c','elemental_ui_model.c','elemental_ui_view.c','elemental_radar.c','elemental_mygui.c']
 if test: extra+=['elemental_ui_model_test.c','elemental_ui_view_test.c','elemental_characters_test.c']
 build.run([str(vc/'cl.exe'),'/nologo','/LD','/O2','/GS-','/Oi','/Zl',*flags,'/Fo'+str(out)+'/',
