@@ -11,13 +11,21 @@ A work-in-progress Kenshi mod that gives player characters elemental enchantment
 
 The interface supports Kenshi's nine official languages. Player-controlled characters and selected named bosses can use enchantments. Boss combat effects are experimental.
 
-Crossbow support is experimental: loading and flying bolts have elemental visuals, while damage calculations, armour penetration, bleeding, bolt speed and experience need further testing and may not work correctly. The crossbow projectile visual and bolt-speed hooks are enabled only for the verified RE_Kenshi executable build; other builds leave them disabled.
+Crossbow support is experimental: loading and flying bolts have elemental visuals, while damage calculations, armour penetration, bleeding, bolt speed and experience need further testing and may not work correctly. The crossbow projectile visual and bolt-speed hooks are enabled only for a specific verified Kenshi executable build; other builds leave them disabled.
 
 Wind also increases crossbow reload speed by 2–10%, depending on Elemental level. If using Nitoryu, load Elemental Enchantment above Nitoryu so its speed bonus is calculated before Nitoryu's speed limits.
 
-## Optional MCM setting
+## Optional MCM settings
 
-With Mod Config Menu installed, open Options > MCM > Elemental Enchantment to enable **All elemental aptitudes 100%**. This removes elemental experience penalties for all player characters. The option is off by default; turning it off restores each character's original aptitude.
+With Mod Config Menu installed, open Options > MCM > Elemental Enchantment to adjust:
+
+- **All elemental aptitudes 100%:** removes aptitude-based XP penalties; turning it off restores each character's original aptitude.
+- **Elemental XP multiplier:** scales XP gain from 0 to 20 times.
+- **Effect strength:** scales combat bonuses from 0 to 5 times; 0 keeps the visuals without combat bonuses.
+- **Weapon trails and impact effects:** enable or disable each visual effect.
+- **UI scale:** adjusts the enchantment window size.
+
+Numeric settings require an MCM version that supports sliders.
 
 ## Repository
 
@@ -25,7 +33,7 @@ With Mod Config Menu installed, open Options > MCM > Elemental Enchantment to en
 - `source/`: plugin source and the tests included in the local build.
 - `docs/`: code map, release instructions, and Workshop text drafts.
 
-The `mod` folder matches the uploaded Workshop files. The plugin uses game and KenshiLib APIs, so compatibility with other versions has not been established.
+The tracked `mod` folder is the package staging area. Its DLL can be older than the source or the current Workshop item; build, stage, and test the intended version before publishing. The plugin uses game and KenshiLib APIs, so compatibility with other versions has not been established.
 
 ## Build
 
