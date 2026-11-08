@@ -1,5 +1,8 @@
 /* Experimental: caller holds guard when modifying visual records. */
 #define CB_LIMIT 64
+/* Drop stale loading samples and bound the life of orphaned projectile visuals. */
+#define CB_CHARGE_STALE_MS 500u
+#define CB_FLIGHT_MAX_AGE_MS 10000u
 /* Ranged combat fields for the executable checked before these hooks install. */
 enum {
     CB_STATE_RELOADING = 2,
@@ -372,7 +375,8 @@ static void cb_capture_created(CBShot *shot, int element, int secondary) {
                 f->element = element;
                 f->secondary = secondary;
                 for (j = 0; j < CB_LIMIT; ++j)
-                    if (cb_charges[j].character && GetTickCount64() - cb_charges[j].sample < 500) {
+                    if (cb_charges[j].character &&
+                        GetTickCount64() - cb_charges[j].sample < CB_CHARGE_STALE_MS) {
                         const unsigned char *h =
                             (const unsigned char *)character_handle(cb_charges[j].character);
                         if (h && *(unsigned *)(h + CB_HANDLE_INDEX_OFFSET) == index &&
@@ -549,7 +553,7 @@ static void cb_update_visuals_impl(void *manager, float dt) {
                 a = &tracked_actors[j];
                 break;
             }
-        if (!a || !a->body || !a->element || now - c->sample > 500) {
+        if (!a || !a->body || !a->element || now - c->sample > CB_CHARGE_STALE_MS) {
             cb_clear_charge(c);
             continue;
         }
@@ -603,7 +607,7 @@ static void cb_update_visuals_impl(void *manager, float dt) {
         float d;
         if (!f->projectile)
             continue;
-        if (!f->source || now - f->born > 10000) {
+        if (!f->source || now - f->born > CB_FLIGHT_MAX_AGE_MS) {
             cb_clear_flight(f);
             continue;
         }
