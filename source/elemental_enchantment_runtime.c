@@ -480,6 +480,14 @@ static void *current_weapon_virtual(void *character) {
                ? ((void *(*)(void *))table[0x3c0 / sizeof(void *)])(character)
                : 0;
 }
+/* WeaponCategory values from KenshiLib's kenshi/Enums.h. Bow and turret
+ * categories fall outside these melee ranges. */
+enum {
+    EE_WEAPON_KATANAS = 0,
+    EE_WEAPON_HACKERS = 4,
+    EE_WEAPON_UNARMED = 5,
+    EE_WEAPON_POLEARMS = 8
+};
 /* 0: ranged/unknown, 1: empty hands, 2: drawn melee weapon. */
 static int melee_context(void *character) {
     void *weapon;
@@ -490,9 +498,12 @@ static int melee_context(void *character) {
     if (!weapon)
         return character_combat(character, 0, 1) ? 0 : 1;
     category = weapon_category(weapon);
-    if (category == 5)
+    if (category == EE_WEAPON_UNARMED)
         return character_combat(character, 0, 1) ? 0 : 1;
-    return (category >= 0 && category <= 4) || category == 8 ? 2 : 0;
+    return (category >= EE_WEAPON_KATANAS && category <= EE_WEAPON_HACKERS) ||
+                   category == EE_WEAPON_POLEARMS
+               ? 2
+               : 0;
 }
 static unsigned int affinity_seed(unsigned int index, unsigned int serial_number) {
     unsigned int x = index ^ (serial_number * 0x9e3779b9u);
