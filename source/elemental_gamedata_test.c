@@ -73,5 +73,11 @@ __declspec(dllexport) int ee_run_gamedata_tests(void) {
     data.count = 513;
     if (ee_gamedata_read(&context, out) != -1 || ee_gamedata_write(&context, values))
         return 4;
+    data.count = 1;
+    data.entries[0].name.size = 7;
+    data.entries[0].name.capacity = 2;
+    if (ee_gamedata_read(&context, out) != -1 || ee_gamedata_write(&context, values) ||
+        data.adds != 1 || data.entries[0].values[0] != 99)
+        return 5;
     return 0;
 }

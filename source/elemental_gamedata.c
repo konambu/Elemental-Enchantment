@@ -30,12 +30,19 @@ static int locate(EEGameDataContext *c, int *index) {
     n = c->api->list_size(c->data, &list_name);
     if (n < 0 || n > 512)
         return -1;
-    for (i = 0; i < n; ++i)
-        if (matches(c->api->list_name(c->data, &list_name, i), &item_name)) {
+    for (i = 0; i < n; ++i) {
+        const EEGameString *name = c->api->list_name(c->data, &list_name, i);
+        /* An unreadable name may be our entry; do not create a duplicate or
+         * overwrite another record when its identity cannot be established. */
+        if (!name || name->size > 1024 || name->capacity < name->size ||
+            (name->capacity >= 16 && !name->text.heap))
+            return -1;
+        if (matches(name, &item_name)) {
             if (found >= 0)
                 return -1;
             found = i;
         }
+    }
     *index = found;
     return found < 0 ? 0 : 1;
 }
