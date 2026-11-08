@@ -23,6 +23,7 @@ python .\source\generate_mcm_strings.py
 
 # Build the normal plugin DLL:
 python .\build.py
+if ($LASTEXITCODE -ne 0) { throw 'Plugin build failed; do not stage an older DLL.' }
 
 # Put that DLL into the project package first:
 Copy-Item -LiteralPath '.\build\ElementalEnchantmentTest.dll' `
@@ -35,17 +36,22 @@ if ($LASTEXITCODE -ge 8) { throw "Package copy failed (robocopy exit $LASTEXITCO
 
 # Confirm the staged plugin matches the new build:
 $builtHash = (Get-FileHash '.\build\ElementalEnchantmentTest.dll').Hash
+$packageHash = (Get-FileHash '.\mod\Elemental Enchantment\plugin\ElementalEnchantmentTest.dll').Hash
 $stagedHash = (Get-FileHash "$gameMod\plugin\ElementalEnchantmentTest.dll").Hash
-if ($builtHash -ne $stagedHash) { throw 'Staged DLL does not match the build.' }
+if ($builtHash -ne $packageHash -or $builtHash -ne $stagedHash) {
+    throw 'Package or staged DLL does not match the build.'
+}
 ```
 
-The two SHA256 values should match. `robocopy /E` copies the project package into Kenshi without deleting extra files already in the local mod folder.
+All three SHA256 values should match. `robocopy /E` copies the project package into Kenshi without deleting extra files already in the local mod folder; inspect that folder for stale files before testing or publishing.
 
 To run the engine-independent native checks, build a separate test DLL and run the check runner:
 
 ```powershell
 python .\build.py --test
+if ($LASTEXITCODE -ne 0) { throw 'Native test build failed.' }
 python .\tools\run_native_checks.py
+if ($LASTEXITCODE -ne 0) { throw 'Native checks failed.' }
 ```
 
 The test DLL is separate from the normal plugin and should not be copied into the Workshop package. The runner also checks particle systems and mod-owned material/texture references. To check references to built-in Kenshi assets as well, run:
@@ -71,6 +77,8 @@ Review `git status` before `git add` and commit only the intended source and pac
 
 ## Upload through FCS
 
+Complete the owner's in-game testing before updating the public Workshop item. A successful build or native check is not approval to publish. Wait for the owner to confirm that testing is complete and authorize the upload.
+
 1. Start `forgotten construction set.exe` from the Kenshi install folder.
 2. Open the local `Elemental Enchantment` mod and its Mod Info window.
 3. Confirm the title, description, change notes, visibility, and Steam ID `3832978749`. Keeping the existing Steam ID updates the current Workshop item.
@@ -84,4 +92,5 @@ FCS controls the Workshop upload step. GitHub `git push` updates the source repo
 1. Update source and any particle/package files under `mod/Elemental Enchantment/`.
 2. Build the normal DLL and copy the package to the Kenshi `mods` folder.
 3. Check the copied DLL hashes, inspect the package, then commit and push the reviewed files.
-4. Upload the same local mod through FCS and verify the Workshop page.
+4. Test the staged mod in game and wait for the owner's confirmation and authorization to publish.
+5. Upload the same tested local mod through FCS and verify the Workshop page.
