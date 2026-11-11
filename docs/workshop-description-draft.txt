@@ -1,5 +1,7 @@
 [h1]Elemental Enchantment[/h1]
 
+[b]Source code / ソースコード:[/b] [url=https://github.com/konambu/Elemental-Enchantment]GitHub[/url]
+
 Wear the elements. Choose your style of battle.
 
 Enchant melee weapons, fists and crossbows with fire, lightning, wind, water or ice. Develop each character's aptitude and combine two elements as they grow.
