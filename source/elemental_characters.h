@@ -22,6 +22,7 @@ void ee_characters_init(EECharacters *characters);
 /* Optional entropy for newly created records only; never used for loaded data. */
 void ee_characters_set_seed_provider(unsigned int (*provider)(unsigned int));
 /** @brief Find or create the in-memory record for a character identity.
+ * @param characters Record table owned by the caller.
  * @param character Live game object; must not be NULL.
  * @param index Game handle index for the character.
  * @param serial Game handle generation, paired with index.

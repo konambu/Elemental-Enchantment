@@ -15,6 +15,7 @@ typedef struct EEGameString {
 } EEGameString;
 
 /** @brief Build a game string, copying short text into inline storage.
+ * @param out Destination string object; must not be NULL.
  * @param text NUL-terminated text; long text remains borrowed from this pointer.
  * @param length Number of bytes before the terminator.
  * @param capacity Game string capacity; must be at least length.
