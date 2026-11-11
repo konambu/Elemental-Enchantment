@@ -90,6 +90,13 @@ static void *create_view_widget(void *c, void *parent, int kind, int x, int y, i
                 a->set_font_height(widget, (size * (int)scale + 5) / 10);
         }
     }
+    if (widget && kind == EE_UI_OPENER && w < 170 && a->get_font_height && a->set_font_height) {
+        int size = a->get_font_height(widget);
+        if (size > 0 && size < 200) {
+            int compact_size = size * w / 170;
+            a->set_font_height(widget, compact_size < 9 ? 9 : compact_size);
+        }
+    }
     if (widget && a->set_property && kind == EE_UI_AXIS_LABEL) {
         EEGameString key, value;
         make_game_string(&key, "TextColour");

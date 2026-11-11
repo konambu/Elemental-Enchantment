@@ -112,7 +112,7 @@ void ee_ui_view_dispose(EEUIView *v, const EEUIViewAPI *a) {
     ee_ui_view_init(v);
 }
 int ee_ui_view_build(EEUIView *v, const EEUIViewAPI *a, void *parent, int width, int height) {
-    int i, x;
+    int i, x, opener_scale, opener_x, opener_y, opener_w, opener_h;
     if (!v || !valid(a) || !parent || width < 300 || height < 260)
         return 0;
     if (v->parent == parent && v->opener && v->panel && v->built_parent_width == width &&
@@ -132,9 +132,32 @@ int ee_ui_view_build(EEUIView *v, const EEUIViewAPI *a, void *parent, int width,
     v->built_scale.y = ui_view_scale.y;
     v->built_scale.manual = ui_view_scale.manual;
     x = width + 12;
+    /* The normal stats window uses a 170x26 opener at (15, 260). On compact
+     * windows, shrink it and move it upward so it stays inside the parent. */
+    opener_scale = 100;
+    if (width < 460)
+        opener_scale = width * 100 / 460;
+    if (height < 380 && height * 100 / 380 < opener_scale)
+        opener_scale = height * 100 / 380;
+    if (opener_scale < 65)
+        opener_scale = 65;
+    opener_w = 170 * opener_scale / 100;
+    opener_h = 26 * opener_scale / 100;
+    opener_x = 15 * opener_scale / 100;
+    opener_y = 260 * opener_scale / 100;
+    if (opener_y + opener_h > height - 8)
+        opener_y = height - opener_h - 8;
+    if (opener_y < 8)
+        opener_y = 8;
     /* Place inside the unused area below the attributes list. The outer
      * window height includes borders and is not the child client height. */
-    v->opener = a->create(a->context, parent, EE_UI_OPENER, 15, 260, 170, 26);
+    v->opener = a->create(a->context,
+                          parent,
+                          EE_UI_OPENER,
+                          opener_x,
+                          opener_y,
+                          opener_w,
+                          opener_h);
     v->panel = a->create(a->context, parent, EE_UI_PANEL, x, 10, 530, 448);
     if (!v->opener || !v->panel)
         goto fail;

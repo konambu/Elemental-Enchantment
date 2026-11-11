@@ -139,7 +139,9 @@ static void stats_window_update_hook(void *window) {
         select_game_locale();
         root = *(void **)((unsigned char *)window + 0x08);
         character = *(void **)((unsigned char *)window + 0xd0);
-        if (!root || stats_window_width(window) < 460 || stats_window_height(window) < 380)
+        /* Keep the opener available on compact layouts; its position and size
+         * are adapted by ee_ui_view_build(). */
+        if (!root || stats_window_width(window) < 300 || stats_window_height(window) < 260)
             return;
         i = ui_find_or_add(window);
         if (i < 0)
